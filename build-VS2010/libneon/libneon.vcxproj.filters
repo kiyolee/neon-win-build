@@ -30,6 +30,9 @@
     <ClCompile Include="..\..\src\ne_dates.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\src\ne_dll.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="..\..\src\ne_i18n.c">
       <Filter>Source Files</Filter>
     </ClCompile>
