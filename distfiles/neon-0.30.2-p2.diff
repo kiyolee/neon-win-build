@@ -1,0 +1,2579 @@
+diff -r -u neon-0.30.2/config.hw neon-0.30.2-p2/config.hw
+--- neon-0.30.2/config.hw	2016-09-30 19:33:24.000000000 +1000
++++ neon-0.30.2-p2/config.hw	2019-01-10 13:44:30.000000000 +1100
+@@ -37,7 +37,7 @@
+ #define HAVE_MEMCPY
+ #define HAVE_SETSOCKOPT
+ 
+-#define HAVE_SSPI
++/* #define HAVE_SSPI */
+ 
+ #define NE_HAVE_TS_SSL 1
+ 
+diff -r -u neon-0.30.2/neon.mak neon-0.30.2-p2/neon.mak
+--- neon-0.30.2/neon.mak	2019-01-10 15:31:07.237940520 +1100
++++ neon-0.30.2-p2/neon.mak	2019-01-10 15:31:07.239924775 +1100
+@@ -8,16 +8,41 @@
+ NULL=nul
+ !ENDIF
+ 
++# Remark this to check command lines
++NOLOGO=/nologo
++
++LIBNEON=lxneon
++
+ ########
+ # Debug vs. Release build
+ !IF "$(DEBUG_BUILD)" == ""
+ INTDIR = Release
+-CFLAGS = /MD /W3 /GX /O2 /D "NDEBUG"
+-TARGET = .\libneon.lib
++!IF "$(BUILD_DLL)" == ""
++TARGET = .\$(LIBNEON)-static.lib
++CFLAGS_RT = /MD /Zl
++CFLAGS_DBG =
++!ELSE
++TARGET = .\$(LIBNEON).dll
++CFLAGS_RT = /MD
++CFLAGS_DBG = /Zi
++!ENDIF
++CFLAGS = $(CFLAGS_RT) $(CFLAGS_DBG) /W3 /GF /EHsc /O2 /D "NDEBUG" /D_CRT_SECURE_NO_DEPRECATE
+ !ELSE
+ INTDIR = Debug
+-CFLAGS = /MDd /W3 /Gm /GX /Zi /Od /D "_DEBUG"
+-TARGET = .\libneonD.lib
++!IF "$(BUILD_DLL)" == ""
++TARGET = .\$(LIBNEON)-static.lib
++CFLAGS_RT = /MDd /Zl
++CFLAGS_DBG =
++!ELSE
++TARGET = .\$(LIBNEON).dll
++CFLAGS_RT = /MDd
++CFLAGS_DBG = /Zi
++!ENDIF
++CFLAGS = $(CFLAGS_RT) $(CFLAGS_DBG) /W3 /GF /EHsc /Od /D "_DEBUG" /D_CRT_SECURE_NO_DEPRECATE
++!ENDIF
++
++!IF "$(BUILD_DLL)" != ""
++CFLAGS = $(CFLAGS) /D NEON_DLL
+ !ENDIF
+ 
+ ########
+@@ -62,7 +87,7 @@
+ !IF "$(OPENSSL_SRC)" == ""
+ OPENSSL_FLAGS =
+ !ELSE
+-OPENSSL_FLAGS = /I "$(OPENSSL_SRC)\inc32" /D NE_HAVE_SSL /D HAVE_OPENSSL
++OPENSSL_FLAGS = /I "$(OPENSSL_SRC)\include" /D NE_HAVE_SSL /D HAVE_OPENSSL
+ !ENDIF
+ 
+ ########
+@@ -74,22 +99,29 @@
+ !ELSE
+ ZLIB_CLEAN = ZLIB_CLEAN
+ !IF "$(DEBUG_BUILD)" == ""
++!IF "$(ZLIB_STATICLIB)" == ""
+ ZLIB_STATICLIB = zlib.lib
++!ENDIF
+ ZLIB_SHAREDLIB = zlib1.dll
+ ZLIB_IMPLIB    = zdll.lib
+-ZLIB_LDFLAGS   = /nologo /release
++ZLIB_LDFLAGS   = $(NOLOGO) /release
+ !ELSE
++!IF "$(ZLIB_STATICLIB)" == ""
+ ZLIB_STATICLIB = zlib_d.lib
++!ENDIF
+ ZLIB_SHAREDLIB = zlib1_d.dll
+ ZLIB_IMPLIB    = zdll_d.lib
+-ZLIB_LDFLAGS   = /nologo /debug
++ZLIB_LDFLAGS   = $(NOLOGO) /debug
+ !ENDIF
+ ZLIB_FLAGS = /I "$(ZLIB_SRC)" /D NE_HAVE_ZLIB
++!IF "$(ZLIB_LIBDIR)" == ""
++ZLIB_LIBDIR    = $(ZLIB_SRC)
++!ENDIF
+ !IF "$(ZLIB_DLL)" == ""
+-ZLIB_LIBS = "$(ZLIB_SRC)\$(ZLIB_STATICLIB)"
++ZLIB_LIBS = "$(ZLIB_LIBDIR)\$(ZLIB_STATICLIB)"
+ !ELSE
+ ZLIB_FLAGS = $(ZLIB_FLAGS) /D ZLIB_DLL
+-ZLIB_LIBS = "$(ZLIB_SRC)\$(ZLIB_IMPLIB)"
++ZLIB_LIBS = "$(ZLIB_LIBDIR)\$(ZLIB_IMPLIB)"
+ !ENDIF
+ !ENDIF
+ 
+@@ -104,9 +136,13 @@
+ WIN32_DEFS = /D WIN32_LEAN_AND_MEAN /D NOUSER /D NOGDI /D NONLS /D NOCRYPT
+ 
+ CPP=cl.exe
+-CPP_PROJ = /c /nologo $(CFLAGS) $(WIN32_DEFS) $(EXPAT_FLAGS) $(OPENSSL_FLAGS) $(ZLIB_FLAGS) $(IPV6_FLAGS) /D "HAVE_CONFIG_H" /Fo"$(INTDIR)\\" /Fd"$(INTDIR)\\"
++CPP_PROJ = /c $(NOLOGO) $(CFLAGS) $(WIN32_DEFS) $(EXPAT_FLAGS) $(OPENSSL_FLAGS) $(ZLIB_FLAGS) $(IPV6_FLAGS) /D "HAVE_CONFIG_H" /Fo"$(INTDIR)\\" /Fd"$(INTDIR)\\"
++!IF "$(BUILD_DLL)" == ""
+ LIB32=link.exe -lib
+-LIB32_FLAGS=/nologo /out:"$(TARGET)"
++!ELSE
++LIB32=link.exe /DLL /DEBUG /pdb:$(LIBNEON).pdb
++!ENDIF
++LIB32_FLAGS=$(NOLOGO) /out:"$(TARGET)"
+ 
+ LIB32_OBJS= \
+ 	"$(INTDIR)\ne_alloc.obj" \
+@@ -142,21 +178,40 @@
+ 
+ !IF "$(OPENSSL_SRC)" != ""
+ LIB32_OBJS = $(LIB32_OBJS) "$(INTDIR)\ne_openssl.obj"
++!IF "$(BUILD_DLL)" != ""
+ !IFDEF OPENSSL_STATIC
+-LIB32_OBJS = $(LIB32_OBJS) "$(OPENSSL_SRC)\out32\libeay32.lib" \
+-			   "$(OPENSSL_SRC)\out32\ssleay32.lib"
++!IF "$(OPENSSL_64BIT)" != ""
++LIB32_OBJS = $(LIB32_OBJS) "$(OPENSSL_SRC)\lib\libcrypto-1_1-static.lib" \
++			   "$(OPENSSL_SRC)\lib\libssl-1_1-static.lib"
++!ELSE
++LIB32_OBJS = $(LIB32_OBJS) "$(OPENSSL_SRC)\lib\libcrypto-1_1-static.lib" \
++			   "$(OPENSSL_SRC)\lib\libssl-1_1-static.lib"
++!ENDIF
++!ELSE
++!IF "$(OPENSSL_64BIT)" != ""
++LIB32_OBJS = $(LIB32_OBJS) "$(OPENSSL_SRC)\lib\libcrypto-1_1.lib" \
++			   "$(OPENSSL_SRC)\lib\libssl-1_1.lib"
+ !ELSE
+-LIB32_OBJS = $(LIB32_OBJS) "$(OPENSSL_SRC)\out32dll\libeay32.lib" \
+-			   "$(OPENSSL_SRC)\out32dll\ssleay32.lib"
++LIB32_OBJS = $(LIB32_OBJS) "$(OPENSSL_SRC)\lib\libcrypto-1_1.lib" \
++			   "$(OPENSSL_SRC)\lib\libssl-1_1.lib"
++!ENDIF
++!ENDIF
+ !ENDIF
+ !ELSE
+ # Provide ABI-compatibility stubs for SSL interface
+ LIB32_OBJS = $(LIB32_OBJS) "$(INTDIR)\ne_stubssl.obj"
+ !ENDIF
++!IF "$(BUILD_DLL)" != ""
+ !IF "$(ZLIB_SRC)" != ""
+ LIB32_OBJS = $(LIB32_OBJS) $(ZLIB_LIBS)
+ !ENDIF
++!ENDIF
+ 
++!IF "$(BUILD_DLL)" == ""
++DLL_LIBS =
++!ELSE
++DLL_LIBS = ws2_32.lib advapi32.lib user32.lib gdi32.lib
++!ENDIF
+ 
+ ALL: ".\src\config.h" "$(TARGET)"
+ 
+@@ -193,7 +248,7 @@
+ "$(TARGET)": $(DEF_FILE) $(LIB32_OBJS)
+ 	-@if not exist "$(INTDIR)/$(NULL)" mkdir "$(INTDIR)"
+ 	$(LIB32) @<<
+-  $(LIB32_FLAGS) $(DEF_FLAGS) $(LIB32_OBJS)
++  $(LIB32_FLAGS) $(DEF_FLAGS) $(LIB32_OBJS) $(DLL_LIBS)
+ <<
+ 
+ {src}.c{$(INTDIR)}.obj::
+@@ -241,19 +296,19 @@
+ 	<<tempfile.bat
+   @echo off
+   cd /d "$(ZLIB_SRC)"
+-  $(MAKE) /nologo /f win32\Makefile.msc CFLAGS="/nologo $(CFLAGS)" LDFLAGS="$(ZLIB_LDFLAGS)" STATICLIB=$(ZLIB_STATICLIB) $(ZLIB_STATICLIB)
++  $(MAKE) $(NOLOGO) /f win32\Makefile.msc CFLAGS="$(NOLOGO) $(CFLAGS)" LDFLAGS="$(ZLIB_LDFLAGS)" STATICLIB=$(ZLIB_STATICLIB) $(ZLIB_STATICLIB)
+ <<
+ 
+ "$(ZLIB_SRC)\$(ZLIB_IMPLIB)":
+ 	<<tempfile.bat
+   @echo off
+   cd /d "$(ZLIB_SRC)"
+-  $(MAKE) /nologo /f win32\Makefile.msc CFLAGS="/nologo $(CFLAGS)" LDFLAGS="$(ZLIB_LDFLAGS)" SHAREDLIB=$(ZLIB_SHAREDLIB) IMPLIB=$(ZLIB_IMPLIB) $(ZLIB_SHAREDLIB) $(ZLIB_IMPLIB)
++  $(MAKE) $(NOLOGO) /f win32\Makefile.msc CFLAGS="$(NOLOGO) $(CFLAGS)" LDFLAGS="$(ZLIB_LDFLAGS)" SHAREDLIB=$(ZLIB_SHAREDLIB) IMPLIB=$(ZLIB_IMPLIB) $(ZLIB_SHAREDLIB) $(ZLIB_IMPLIB)
+ <<
+ 
+ ZLIB_CLEAN:
+ 	<<tempfile.bat
+   @echo off
+   cd /d "$(ZLIB_SRC)"
+-  $(MAKE) /nologo /f win32\Makefile.msc STATICLIB=$(ZLIB_STATICLIB) SHAREDLIB=$(ZLIB_SHAREDLIB) IMPLIB=$(ZLIB_IMPLIB) clean
++  $(MAKE) $(NOLOGO) /f win32\Makefile.msc STATICLIB=$(ZLIB_STATICLIB) SHAREDLIB=$(ZLIB_SHAREDLIB) IMPLIB=$(ZLIB_IMPLIB) clean
+ <<
+diff -r -u neon-0.30.2/src/memleak.h neon-0.30.2-p2/src/memleak.h
+--- neon-0.30.2/src/memleak.h	2004-10-03 04:47:02.000000000 +1000
++++ neon-0.30.2-p2/src/memleak.h	2019-01-10 13:44:30.000000000 +1100
+@@ -31,6 +31,8 @@
+ 
+ #include <stdio.h>
+ 
++#include "ne_defs.h"
++
+ #define ne_malloc(s) ne_malloc_ml(s, __FILE__, __LINE__)
+ #define ne_calloc(s) ne_calloc_ml(s, __FILE__, __LINE__)
+ #define ne_realloc(p, s) ne_realloc_ml(p, s, __FILE__, __LINE__)
+@@ -39,17 +41,17 @@
+ #define ne_free ne_free_ml
+ 
+ /* Prototypes of allocation functions: */
+-void *ne_malloc_ml(size_t size, const char *file, int line);
+-void *ne_calloc_ml(size_t size, const char *file, int line);
+-void *ne_realloc_ml(void *ptr, size_t s, const char *file, int line);
+-char *ne_strdup_ml(const char *s, const char *file, int line);
+-char *ne_strndup_ml(const char *s, size_t n, const char *file, int line);
+-void ne_free_ml(void *ptr);
++NEON_API(void *) ne_malloc_ml(size_t size, const char *file, int line);
++NEON_API(void *) ne_calloc_ml(size_t size, const char *file, int line);
++NEON_API(void *) ne_realloc_ml(void *ptr, size_t s, const char *file, int line);
++NEON_API(char *) ne_strdup_ml(const char *s, const char *file, int line);
++NEON_API(char *) ne_strndup_ml(const char *s, size_t n, const char *file, int line);
++NEON_API(void) ne_free_ml(void *ptr);
+ 
+ /* Dump the list of currently allocated blocks to 'f'. */
+-void ne_alloc_dump(FILE *f);
++NEON_API(void) ne_alloc_dump(FILE *f);
+ 
+ /* Current number of bytes in allocated but not free'd. */
+-extern size_t ne_alloc_used;
++extern NEON_LINKAGE size_t ne_alloc_used;
+ 
+ #endif /* MEMLEAK_H */
+diff -r -u neon-0.30.2/src/ne_207.h neon-0.30.2-p2/src/ne_207.h
+--- neon-0.30.2/src/ne_207.h	2006-01-02 22:43:19.000000000 +1100
++++ neon-0.30.2-p2/src/ne_207.h	2019-01-10 13:44:30.000000000 +1100
+@@ -68,27 +68,27 @@
+ /* Create 207 parser an add the handlers the the given parser's
+  * handler stack.  URI references in the 207 response will be resolved
+  * relative to the base URI 'base'. */
+-ne_207_parser *ne_207_create(ne_xml_parser *parser, const ne_uri *base, 
+-                             void *userdata);
++NEON_API(ne_207_parser *) ne_207_create(ne_xml_parser *parser, const ne_uri *base, 
++                                        void *userdata);
+ 
+ /* Register response handling callbacks. */
+-void ne_207_set_response_handlers(ne_207_parser *p,
+-                                  ne_207_start_response *start,
+-                                  ne_207_end_response *end);
++NEON_API(void) ne_207_set_response_handlers(ne_207_parser *p,
++                                            ne_207_start_response *start,
++                                            ne_207_end_response *end);
+ 
+ /* Register propstat handling callbacks. */
+-void ne_207_set_propstat_handlers(ne_207_parser *p, 
+-                                  ne_207_start_propstat *start,
+-                                  ne_207_end_propstat *end);
++NEON_API(void) ne_207_set_propstat_handlers(ne_207_parser *p, 
++                                            ne_207_start_propstat *start,
++                                            ne_207_end_propstat *end);
+ 
+ /* Destroy the parser */
+-void ne_207_destroy(ne_207_parser *p);
++NEON_API(void) ne_207_destroy(ne_207_parser *p);
+ 
+ /* An acceptance function which only accepts 207 responses */
+-int ne_accept_207(void *userdata, ne_request *req, const ne_status *status);
++NEON_API(int) ne_accept_207(void *userdata, ne_request *req, const ne_status *status);
+ 
+-void *ne_207_get_current_propstat(ne_207_parser *p);
+-void *ne_207_get_current_response(ne_207_parser *p);
++NEON_API(void *) ne_207_get_current_propstat(ne_207_parser *p);
++NEON_API(void *) ne_207_get_current_response(ne_207_parser *p);
+ 
+ /* Dispatch request 'req', returning:
+  *  NE_ERROR: for a dispatch error, or a non-2xx response, or a
+@@ -96,7 +96,7 @@
+  *  NE_OK: for a 2xx response or a 207 response which contained
+  *            only 2xx-class propstats.
+  * The request object is destroyed in both cases. */
+-int ne_simple_request(ne_session *sess, ne_request *req);
++NEON_API(int) ne_simple_request(ne_session *sess, ne_request *req);
+ 
+ NE_END_DECLS
+ 
+diff -r -u neon-0.30.2/src/ne_acl.h neon-0.30.2-p2/src/ne_acl.h
+--- neon-0.30.2/src/ne_acl.h	2008-10-15 07:50:24.000000000 +1100
++++ neon-0.30.2-p2/src/ne_acl.h	2019-01-10 13:44:30.000000000 +1100
+@@ -52,8 +52,8 @@
+ } ne_acl_entry;
+ 
+ /* Set the ACL for the given resource to the list of ACL entries. */
+-int ne_acl_set(ne_session *sess, const char *uri,
+-	       const ne_acl_entry entries[], int numentries);
++NEON_API(int) ne_acl_set(ne_session *sess, const char *uri,
++	                 const ne_acl_entry entries[], int numentries);
+ 
+ NE_END_DECLS
+ 
+diff -r -u neon-0.30.2/src/ne_alloc.c neon-0.30.2-p2/src/ne_alloc.c
+--- neon-0.30.2/src/ne_alloc.c	2008-11-21 07:56:15.000000000 +1100
++++ neon-0.30.2-p2/src/ne_alloc.c	2019-01-10 13:44:30.000000000 +1100
+@@ -33,7 +33,7 @@
+ 
+ #include "ne_alloc.h"
+ 
+-static ne_oom_callback_fn oom;
++static ne_oom_callback_fn oom = NULL;
+ 
+ void ne_oom_callback(ne_oom_callback_fn callback)
+ {
+@@ -42,13 +42,13 @@
+ 
+ #ifndef NEON_MEMLEAK
+ 
+-#define DO_MALLOC(ptr, len) do {		\
+-    ptr = malloc((len));			\
+-    if (!ptr) {					\
+-	if (oom != NULL)			\
+-	    oom();				\
+-	abort();				\
+-    }						\
++#define DO_MALLOC(ptr, len) do {                \
++    ptr = malloc((len));                        \
++    if (!ptr) {                                 \
++        if (oom != NULL)                        \
++            oom();                              \
++        abort();                                \
++    }                                           \
+ } while(0);
+ 
+ void *ne_malloc(size_t len) 
+@@ -69,9 +69,9 @@
+ {
+     void *ret = realloc(ptr, len);
+     if (!ret) {
+-	if (oom)
+-	    oom();
+-	abort();
++        if (oom)
++            oom();
++        abort();
+     }
+     return ret;
+ }
+@@ -134,8 +134,8 @@
+     struct block *block;
+ 
+     if (!ptr) {
+-	if (oom) oom();
+-	abort();
++        if (oom) oom();
++        abort();
+     }
+     
+     block = malloc(sizeof *block);
+diff -r -u neon-0.30.2/src/ne_alloc.h neon-0.30.2-p2/src/ne_alloc.h
+--- neon-0.30.2/src/ne_alloc.h	2008-11-21 07:56:15.000000000 +1100
++++ neon-0.30.2-p2/src/ne_alloc.h	2019-01-10 13:44:30.000000000 +1100
+@@ -35,7 +35,7 @@
+ typedef void (*ne_oom_callback_fn)(void);
+ 
+ /* Set callback which is called if malloc() returns NULL. */
+-void ne_oom_callback(ne_oom_callback_fn callback);
++NEON_API(void) ne_oom_callback(ne_oom_callback_fn callback);
+ 
+ #ifndef NEON_MEMLEAK
+ /* Replacements for standard C library memory allocation functions,
+@@ -43,13 +43,13 @@
+  * neon will abort(); calling an OOM callback beforehand if one is
+  * registered.  The C library will only ever return NULL if the
+  * operating system does not use optimistic memory allocation. */
+-void *ne_malloc(size_t size) ne_attribute_malloc;
+-void *ne_calloc(size_t size) ne_attribute_malloc;
+-void *ne_realloc(void *ptr, size_t s);
+-char *ne_strdup(const char *s) ne_attribute_malloc;
+-char *ne_strndup(const char *s, size_t n) ne_attribute_malloc;
++NEON_API(void *) ne_malloc(size_t size) ne_attribute_malloc;
++NEON_API(void *) ne_calloc(size_t size) ne_attribute_malloc;
++NEON_API(void *) ne_realloc(void *ptr, size_t s);
++NEON_API(char *) ne_strdup(const char *s) ne_attribute_malloc;
++NEON_API(char *) ne_strndup(const char *s, size_t n) ne_attribute_malloc;
+ #ifdef WIN32
+-void ne_free(void *ptr);
++NEON_API(void) ne_free(void *ptr);
+ #else
+ #define ne_free free
+ #endif
+diff -r -u neon-0.30.2/src/ne_auth.h neon-0.30.2-p2/src/ne_auth.h
+--- neon-0.30.2/src/ne_auth.h	2012-06-26 18:17:20.000000000 +1000
++++ neon-0.30.2-p2/src/ne_auth.h	2019-01-10 13:44:30.000000000 +1100
+@@ -53,8 +53,8 @@
+ /* Set callbacks to provide credentials for server and proxy
+  * authentication, using the default set of authentication protocols.
+  * userdata is passed as the first argument to the callback. */
+-void ne_set_server_auth(ne_session *sess, ne_auth_creds creds, void *userdata);
+-void ne_set_proxy_auth(ne_session *sess, ne_auth_creds creds, void *userdata);
++NEON_API(void) ne_set_server_auth(ne_session *sess, ne_auth_creds creds, void *userdata);
++NEON_API(void) ne_set_proxy_auth(ne_session *sess, ne_auth_creds creds, void *userdata);
+ 
+ /* As an alternative to using ne_set_server_auth and
+  * ne_set_proxy_auth, the following interfaces may be used; these
+@@ -129,14 +129,14 @@
+  * ne_add_proxy_auth are used for a given session, the caller must
+  * ensure that the order in which those calls are made reflects the
+  * precedence of protocols to be used. */
+-void ne_add_server_auth(ne_session *sess, unsigned protocol, 
+-                        ne_auth_creds creds, void *userdata);
+-void ne_add_proxy_auth(ne_session *sess, unsigned protocol, 
+-                       ne_auth_creds creds, void *userdata);
++NEON_API(void) ne_add_server_auth(ne_session *sess, unsigned protocol, 
++                                  ne_auth_creds creds, void *userdata);
++NEON_API(void) ne_add_proxy_auth(ne_session *sess, unsigned protocol, 
++                                 ne_auth_creds creds, void *userdata);
+ 
+ /* Clear any cached authentication credentials for the given
+  * session. */
+-void ne_forget_auth(ne_session *sess);
++NEON_API(void) ne_forget_auth(ne_session *sess);
+ 
+ NE_END_DECLS
+ 
+diff -r -u neon-0.30.2/src/ne_basic.h neon-0.30.2-p2/src/ne_basic.h
+--- neon-0.30.2/src/ne_basic.h	2013-07-27 03:38:05.000000000 +1000
++++ neon-0.30.2-p2/src/ne_basic.h	2019-01-10 13:44:30.000000000 +1100
+@@ -30,11 +30,11 @@
+ 
+ /* Perform a GET request on resource at 'path', writing the entity
+  * body which is returned to 'fd'. */
+-int ne_get(ne_session *sess, const char *path, int fd);
++NEON_API(int) ne_get(ne_session *sess, const char *path, int fd);
+ 
+ /* Perform a PUT request on resource at 'path', reading the entity
+  * body to submit from 'fd'. */
+-int ne_put(ne_session *sess, const char *path, int fd);
++NEON_API(int) ne_put(ne_session *sess, const char *path, int fd);
+ 
+ #define NE_DEPTH_ZERO (0)
+ #define NE_DEPTH_ONE (1)
+@@ -52,29 +52,29 @@
+  * collection and its properties are to be copied, or
+  * NE_DEPTH_INFINITE to request that the collection and its contents
+  * are to be copied.  Returns NE_* error code. */
+-int ne_copy(ne_session *sess, int overwrite, int depth,
+-	    const char *src, const char *dest);
++NEON_API(int) ne_copy(ne_session *sess, int overwrite, int depth,
++	              const char *src, const char *dest);
+ 
+ /* Move resource from 'src' to 'dest' path.  Returns NE_* error
+  * code. */
+-int ne_move(ne_session *sess, int overwrite,
+-	    const char *src, const char *dest);
++NEON_API(int) ne_move(ne_session *sess, int overwrite,
++	              const char *src, const char *dest);
+ 
+ /* Delete resource at 'path'.  Returns NE_* error code. */
+-int ne_delete(ne_session *sess, const char *path);
++NEON_API(int) ne_delete(ne_session *sess, const char *path);
+ 
+ /* Create a collection at 'path', which is required to have a trailing
+  * slash.  Returns NE_* error code. */
+-int ne_mkcol(ne_session *sess, const char *path);
++NEON_API(int) ne_mkcol(ne_session *sess, const char *path);
+ 
+ /* Adds a Depth: header to a request. */
+-void ne_add_depth_header(ne_request *req, int depth);
++NEON_API(void) ne_add_depth_header(ne_request *req, int depth);
+ 
+ /* Retrieve modification time of resource at location 'path', using
+  * the HEAD method, placing parsed time in *modtime.  *modtime is set
+  * to -1 if no Last-Modified response header was given, or the date
+  * given could not be parsed.  Returns NE_* error code.  */
+-int ne_getmodtime(ne_session *sess, const char *path, time_t *modtime);
++NEON_API(int) ne_getmodtime(ne_session *sess, const char *path, time_t *modtime);
+ 
+ typedef struct {
+     const char *type, *subtype;
+@@ -86,7 +86,7 @@
+  * had valid content-type, in which case all fields in *ctype are set
+  * (and never NULL); the caller must free(ctype->value) after use.
+  * Returns non-zero on error, in which case *ctype is not altered. */
+-int ne_get_content_type(ne_request *req, ne_content_type *ctype);
++NEON_API(int) ne_get_content_type(ne_request *req, ne_content_type *ctype);
+ 
+ /* DEPRECATED: Server capabilities. */
+ typedef struct {
+@@ -98,8 +98,8 @@
+ 
+ /* DEPRECATED: Determines server capabilities (using OPTIONS).  Use
+  * ne_options2() instead. */
+-int ne_options(ne_session *sess, const char *path,
+-               ne_server_capabilities *caps);
++NEON_API(int) ne_options(ne_session *sess, const char *path,
++                         ne_server_capabilities *caps);
+ 
+ #define NE_CAP_DAV_CLASS1    (0x0001) /* Class 1 WebDAV (RFC 2518) */
+ #define NE_CAP_DAV_CLASS2    (0x0002) /* Class 2 WebDAV (RFC 2518) */
+@@ -122,7 +122,7 @@
+ /* Determines resource capailities, using an OPTIONS request.  On
+  * return, *caps is set to a bit-mask of the above NE_CAP_* constants
+  * describing the advertised resource capabilities. */
+-int ne_options2(ne_session *sess, const char *path, unsigned int *caps);
++NEON_API(int) ne_options2(ne_session *sess, const char *path, unsigned int *caps);
+ 
+ /* Defines a range of bytes, starting at 'start' and ending
+  * at 'end'.  'total' is the number of bytes in the range.
+@@ -145,11 +145,11 @@
+  *      range.end = range.start + 999;  (= 1000 bytes)
+  *      fseek(myfile, resume_from, SEEK_SET);
+  *      ne_get_range(sess, path, &range, myfile); */
+-int ne_get_range(ne_session *sess, const char *path, 
+-		 ne_content_range *range, int fd);
++NEON_API(int) ne_get_range(ne_session *sess, const char *path, 
++		           ne_content_range *range, int fd);
+ 
+ /* Post using buffer as request-body: stream response into f */
+-int ne_post(ne_session *sess, const char *path, int fd, const char *buffer);
++NEON_API(int) ne_post(ne_session *sess, const char *path, int fd, const char *buffer);
+ 
+ NE_END_DECLS
+ 
+diff -r -u neon-0.30.2/src/ne_compress.h neon-0.30.2-p2/src/ne_compress.h
+--- neon-0.30.2/src/ne_compress.h	2007-07-16 16:54:57.000000000 +1000
++++ neon-0.30.2-p2/src/ne_compress.h	2019-01-10 13:44:30.000000000 +1100
+@@ -37,11 +37,11 @@
+  * ne_decompress_destroy after the request has been dispatched, to
+  * free any internal state.  If an error occurs during decompression,
+  * the request will be aborted and session error string set. */
+-ne_decompress *ne_decompress_reader(ne_request *req, ne_accept_response accpt,
+-				    ne_block_reader rdr, void *userdata);
++NEON_API(ne_decompress *) ne_decompress_reader(ne_request *req, ne_accept_response accpt,
++				               ne_block_reader rdr, void *userdata);
+ 
+ /* Destroys decompression state. */
+-void ne_decompress_destroy(ne_decompress *ctx);
++NEON_API(void) ne_decompress_destroy(ne_decompress *ctx);
+ 
+ NE_END_DECLS
+ 
+diff -r -u neon-0.30.2/src/ne_dates.h neon-0.30.2-p2/src/ne_dates.h
+--- neon-0.30.2/src/ne_dates.h	2005-11-29 08:54:09.000000000 +1100
++++ neon-0.30.2-p2/src/ne_dates.h	2019-01-10 13:44:30.000000000 +1100
+@@ -31,23 +31,23 @@
+ /* Date manipulation routines as per RFC1123 and RFC1036 */
+ 
+ /* Return current date/time in RFC1123 format */
+-char *ne_rfc1123_date(time_t anytime);
++NEON_API(char *) ne_rfc1123_date(time_t anytime);
+ 
+ /* Returns time from date/time using the subset of the ISO8601 format
+  * referenced in RFC2518 (e.g as used in the creationdate property in
+  * the DAV: namespace). */
+-time_t ne_iso8601_parse(const char *date);
++NEON_API(time_t) ne_iso8601_parse(const char *date);
+ 
+ /* Returns time from date/time in RFC1123 format */
+-time_t ne_rfc1123_parse(const char *date);
++NEON_API(time_t) ne_rfc1123_parse(const char *date);
+ 
+-time_t ne_rfc1036_parse(const char *date);
++NEON_API(time_t) ne_rfc1036_parse(const char *date);
+ 
+ /* Parses asctime date string */
+-time_t ne_asctime_parse(const char *date);
++NEON_API(time_t) ne_asctime_parse(const char *date);
+ 
+ /* Parse an HTTP-date as per RFC2616 */
+-time_t ne_httpdate_parse(const char *date);
++NEON_API(time_t) ne_httpdate_parse(const char *date);
+ 
+ NE_END_DECLS
+ 
+diff -r -u neon-0.30.2/src/ne_defs.h neon-0.30.2-p2/src/ne_defs.h
+--- neon-0.30.2/src/ne_defs.h	2013-07-27 02:16:21.000000000 +1000
++++ neon-0.30.2-p2/src/ne_defs.h	2019-01-10 13:44:30.000000000 +1100
+@@ -19,6 +19,9 @@
+ 
+ */
+ 
++#ifndef NE_DEFS_H
++#define NE_DEFS_H
++
+ #undef NE_BEGIN_DECLS
+ #undef NE_END_DECLS
+ #ifdef __cplusplus
+@@ -29,9 +32,6 @@
+ # define NE_END_DECLS /* empty */
+ #endif
+ 
+-#ifndef NE_DEFS_H
+-#define NE_DEFS_H
+-
+ #include <sys/types.h>
+ 
+ #ifdef NE_LFS
+@@ -43,6 +43,17 @@
+ typedef off_t ne_off_t;
+ #endif
+ 
++#if defined(WIN32) && defined(NEON_DLL)
++#define NEON_LINKAGE __declspec(dllexport)
++#define NEON_API(rettype) NEON_LINKAGE rettype _cdecl
++#elif defined(WIN32) && defined(NEON_IMPORT)
++#define NEON_LINKAGE __declspec(dllimport)
++#define NEON_API(rettype) NEON_LINKAGE rettype _cdecl
++#else
++#define NEON_LINKAGE /* empty */
++#define NEON_API(rettype) rettype
++#endif
++
+ /* define ssize_t for Win32 */
+ #if defined(WIN32) && !defined(ssize_t)
+ #define ssize_t int
+diff -r -u neon-0.30.2/src/ne_i18n.h neon-0.30.2-p2/src/ne_i18n.h
+--- neon-0.30.2/src/ne_i18n.h	2006-01-07 01:05:40.000000000 +1100
++++ neon-0.30.2-p2/src/ne_i18n.h	2019-01-10 13:44:30.000000000 +1100
+@@ -48,7 +48,7 @@
+  * results may be unexpected if other users of neon within the process
+  * call ne_i18n_init() with a different encoding parameter.
+  */
+-void ne_i18n_init(const char *encoding);
++NEON_API(void) ne_i18n_init(const char *encoding);
+ 
+ NE_END_DECLS
+ 
+diff -r -u neon-0.30.2/src/ne_internal.h neon-0.30.2-p2/src/ne_internal.h
+--- neon-0.30.2/src/ne_internal.h	2006-10-25 05:40:09.000000000 +1000
++++ neon-0.30.2-p2/src/ne_internal.h	2019-01-10 13:44:30.000000000 +1100
+@@ -64,7 +64,11 @@
+ 
+ #else /* !NE_LFS */
+ 
++#if defined(_MSC_VER) && _MSC_VER >= 1400
++#define ne_lseek _lseek
++#else
+ #define ne_lseek lseek
++#endif
+ #define FMT_NE_OFF_T NE_FMT_OFF_T
+ 
+ #if defined(SIZEOF_LONG_LONG) && defined(LONG_LONG_MAX) \
+diff -r -u neon-0.30.2/src/ne_locks.h neon-0.30.2-p2/src/ne_locks.h
+--- neon-0.30.2/src/ne_locks.h	2006-01-02 22:43:19.000000000 +1100
++++ neon-0.30.2-p2/src/ne_locks.h	2019-01-10 13:44:30.000000000 +1100
+@@ -58,36 +58,36 @@
+ /* Create a depth zero, exclusive write lock, with default timeout
+  * (allowing a server to pick a default).  token, owner and uri are
+  * unset. */
+-struct ne_lock *ne_lock_create(void);
++NEON_API(struct ne_lock *) ne_lock_create(void);
+ 
+ /* HINT: to initialize uri host/port/scheme for the lock's URI, use
+  * ne_fill_server_uri from ne_session.h. */
+ 
+ /* Deep-copy a lock structure: strdup's any of path, token, owner,
+  * hostport which are set. */
+-struct ne_lock *ne_lock_copy(const struct ne_lock *lock);
++NEON_API(struct ne_lock *) ne_lock_copy(const struct ne_lock *lock);
+ 
+ /* Free a lock structure; free's any of any of the URI, token and
+  * owner which are set, but not the lock object itself. */
+-void ne_lock_free(struct ne_lock *lock);
++NEON_API(void) ne_lock_free(struct ne_lock *lock);
+ 
+ /* Like ne_lock_free; but free's the lock object itself too. */
+-void ne_lock_destroy(struct ne_lock *lock);
++NEON_API(void) ne_lock_destroy(struct ne_lock *lock);
+ 
+ /* ne_lock_store: an opaque type which is used to store a set of lock
+  * objects. */
+ typedef struct ne_lock_store_s ne_lock_store;
+ 
+ /* Create a lock store. */
+-ne_lock_store *ne_lockstore_create(void);
++NEON_API(ne_lock_store *) ne_lockstore_create(void);
+ 
+ /* Register the lock store 'store' with the HTTP session 'sess': any
+  * operations made using 'sess' which operate on a locked resource,
+  * can use the locks from 'store' if needed. */
+-void ne_lockstore_register(ne_lock_store *store, ne_session *sess);
++NEON_API(void) ne_lockstore_register(ne_lock_store *store, ne_session *sess);
+ 
+ /* Destroy a lock store, free'ing any locks remaining inside. */
+-void ne_lockstore_destroy(ne_lock_store *store);
++NEON_API(void) ne_lockstore_destroy(ne_lock_store *store);
+ 
+ /* Add a lock to the store: the store then "owns" the lock object, and
+  * you must not free it. The lock MUST have all of:
+@@ -95,26 +95,26 @@
+  *  - a valid lock token
+  *  - a valid depth
+  */
+-void ne_lockstore_add(ne_lock_store *store, struct ne_lock *lock);
++NEON_API(void) ne_lockstore_add(ne_lock_store *store, struct ne_lock *lock);
+ 
+ /* Remove given lock object from store: 'lock' MUST point to a lock
+  * object which is known to be in the store. */
+-void ne_lockstore_remove(ne_lock_store *store, struct ne_lock *lock);
++NEON_API(void) ne_lockstore_remove(ne_lock_store *store, struct ne_lock *lock);
+ 
+ /* Returns the first lock in the lock store, or NULL if the store is
+  * empty. */
+-struct ne_lock *ne_lockstore_first(ne_lock_store *store);
++NEON_API(struct ne_lock *) ne_lockstore_first(ne_lock_store *store);
+ 
+ /* After ne_lockstore_first has been called; returns the next lock in
+  * the lock store, or NULL if there are no more locks stored.
+  * Behaviour is undefined if ne_lockstore_first has not been called on
+  * 'store' since the store was created, or the last time this function
+  * returned NULL for the store.. */
+-struct ne_lock *ne_lockstore_next(ne_lock_store *store);
++NEON_API(struct ne_lock *) ne_lockstore_next(ne_lock_store *store);
+ 
+ /* Find a lock in the store for the given server, and with the given
+  * path. */
+-struct ne_lock *ne_lockstore_findbyuri(ne_lock_store *store, 
++NEON_API(struct ne_lock *) ne_lockstore_findbyuri(ne_lock_store *store, 
+ 				       const ne_uri *uri);
+ 
+ /* Issue a LOCK request for the given lock.  Requires that the uri,
+@@ -122,13 +122,13 @@
+  * owner and token must be malloc-allocated if not NULL; and may be
+  * free()d by this function.  On successful return, lock->token will
+  * contain the lock token. */
+-int ne_lock(ne_session *sess, struct ne_lock *lock);
++NEON_API(int) ne_lock(ne_session *sess, struct ne_lock *lock);
+ 
+ /* Issue an UNLOCK request for the given lock */
+-int ne_unlock(ne_session *sess, const struct ne_lock *lock);
++NEON_API(int) ne_unlock(ne_session *sess, const struct ne_lock *lock);
+ 
+ /* Refresh a lock. Updates lock->timeout appropriately. */
+-int ne_lock_refresh(ne_session *sess, struct ne_lock *lock);
++NEON_API(int) ne_lock_refresh(ne_session *sess, struct ne_lock *lock);
+ 
+ /* Callback for lock discovery.  If 'lock' is NULL, something went
+  * wrong performing lockdiscovery for the resource, look at 'status'
+@@ -141,8 +141,8 @@
+ 
+ /* Perform lock discovery on the given path.  'result' is called with
+  * the results (possibly >1 times).  */
+-int ne_lock_discover(ne_session *sess, const char *path,
+-		     ne_lock_result result, void *userdata);
++NEON_API(int) ne_lock_discover(ne_session *sess, const char *path,
++		               ne_lock_result result, void *userdata);
+ 
+ /* The ne_lock_using_* functions should be used before dispatching a
+  * request which modify resources.  If a lock store has been
+@@ -153,12 +153,12 @@
+ 
+ /* Indicate that request 'req' will modify the resource at 'path', and
+  * is an operation of given 'depth'. */
+-void ne_lock_using_resource(ne_request *req, const char *path, int depth);
++NEON_API(void) ne_lock_using_resource(ne_request *req, const char *path, int depth);
+ 
+ /* Indicate that request 'req' will modify the parent collection of
+  * the resource found at 'path' (for instance when removing the
+  * resource from the collection). */
+-void ne_lock_using_parent(ne_request *req, const char *path);
++NEON_API(void) ne_lock_using_parent(ne_request *req, const char *path);
+ 
+ NE_END_DECLS
+ 
+diff -r -u neon-0.30.2/src/ne_md5.h neon-0.30.2-p2/src/ne_md5.h
+--- neon-0.30.2/src/ne_md5.h	2007-07-16 16:54:57.000000000 +1000
++++ neon-0.30.2-p2/src/ne_md5.h	2019-01-10 13:44:30.000000000 +1100
+@@ -28,6 +28,8 @@
+ 
+ NE_BEGIN_DECLS
+ 
++#include "ne_defs.h"
++
+ /*
+  * The following three functions are build up the low level used in
+  * the functions `md5_stream' and `md5_buffer'.
+@@ -35,21 +37,21 @@
+ struct ne_md5_ctx;
+ 
+ /* Create structure containing state of computation. */
+-extern struct ne_md5_ctx *ne_md5_create_ctx(void);
++extern NEON_API(struct ne_md5_ctx *) ne_md5_create_ctx(void);
+ 
+ /* Starting with the result of former calls of this function (or the
+    initialization function update the context for the next LEN bytes
+    starting at BUFFER.
+    It is necessary that LEN is a multiple of 64!!! */
+-extern void ne_md5_process_block(const void *buffer, size_t len,
+-                                 struct ne_md5_ctx *ctx);
++extern NEON_API(void) ne_md5_process_block(const void *buffer, size_t len,
++                                           struct ne_md5_ctx *ctx);
+ 
+ /* Starting with the result of former calls of this function (or the
+    initialization function update the context for the next LEN bytes
+    starting at BUFFER.
+    It is NOT required that LEN is a multiple of 64.  */
+-extern void ne_md5_process_bytes(const void *buffer, size_t len,
+-                                 struct ne_md5_ctx *ctx);
++extern NEON_API(void) ne_md5_process_bytes(const void *buffer, size_t len,
++                                           struct ne_md5_ctx *ctx);
+ 
+ /* Process the remaining bytes in the buffer and put result from CTX
+    in first 16 bytes following RESBUF.  The result is always in little
+@@ -58,7 +60,7 @@
+ 
+    IMPORTANT: On some systems it is required that RESBUF is correctly
+    aligned for a 32 bits value.  */
+-extern void *ne_md5_finish_ctx(struct ne_md5_ctx *ctx, void *resbuf);
++extern NEON_API(void *) ne_md5_finish_ctx(struct ne_md5_ctx *ctx, void *resbuf);
+ 
+ 
+ /* Put result from CTX in first 16 bytes following RESBUF.  The result is
+@@ -67,31 +69,31 @@
+ 
+    IMPORTANT: On some systems it is required that RESBUF is correctly
+    aligned for a 32 bits value.  */
+-extern void *ne_md5_read_ctx(const struct ne_md5_ctx *ctx, void *resbuf);
++extern NEON_API(void *) ne_md5_read_ctx(const struct ne_md5_ctx *ctx, void *resbuf);
+ 
+ /* Take a copy of the state structure. */
+-extern struct ne_md5_ctx *ne_md5_dup_ctx(struct ne_md5_ctx *ctx);
++extern NEON_API(struct ne_md5_ctx *) ne_md5_dup_ctx(struct ne_md5_ctx *ctx);
+ 
+ /* Re-initialize the context structure. */
+-extern void ne_md5_reset_ctx(struct ne_md5_ctx *ctx);
++extern NEON_API(void) ne_md5_reset_ctx(struct ne_md5_ctx *ctx);
+ 
+ /* Destroy the context structure. */
+-extern void ne_md5_destroy_ctx(struct ne_md5_ctx *ctx);
++extern NEON_API(void) ne_md5_destroy_ctx(struct ne_md5_ctx *ctx);
+ 
+ /* Compute MD5 message digest for bytes read from STREAM.  The
+    resulting message digest number will be written into the 16 bytes
+    beginning at RESBLOCK.  */
+-extern int ne_md5_stream(FILE *stream, void *resblock);
++extern NEON_API(int) ne_md5_stream(FILE *stream, void *resblock);
+ 
+ /* Process the remaining bytes in the buffer and put ASCII
+    representation of the resulting message digest from CTX in the
+    first 33 bytes of BUFFER, including a trailing NUL terminator
+    byte.  Returns pointer to buffer. */
+-char *ne_md5_finish_ascii(struct ne_md5_ctx *ctx, char buffer[33]);
++NEON_API(char *) ne_md5_finish_ascii(struct ne_md5_ctx *ctx, char buffer[33]);
+ 
+ /* MD5 ascii->binary conversion */
+-void ne_md5_to_ascii(const unsigned char md5_buf[16], char *buffer);
+-void ne_ascii_to_md5(const char *buffer, unsigned char md5_buf[16]);
++NEON_API(void) ne_md5_to_ascii(const unsigned char md5_buf[16], char *buffer);
++NEON_API(void) ne_ascii_to_md5(const char *buffer, unsigned char md5_buf[16]);
+ 
+ NE_END_DECLS
+ 
+diff -r -u neon-0.30.2/src/ne_openssl.c neon-0.30.2-p2/src/ne_openssl.c
+--- neon-0.30.2/src/ne_openssl.c	2016-09-30 18:46:00.000000000 +1000
++++ neon-0.30.2-p2/src/ne_openssl.c	2019-01-10 14:12:32.000000000 +1100
+@@ -21,6 +21,16 @@
+ 
+ #include "config.h"
+ 
++#ifdef WIN32
++#ifndef WIN32_LEAN_AND_MEAN
++#define WIN32_LEAN_AND_MEAN
++#endif
++#ifndef NOMINMAX
++#define NOMINMAX
++#endif
++#include <windows.h>
++#endif
++
+ #include <sys/types.h>
+ 
+ #ifdef HAVE_STRING_H
+@@ -72,6 +82,10 @@
+ #define EVP_PKEY_get0_RSA(evp) (evp->pkey.rsa)
+ #endif
+ 
++#if OPENSSL_VERSION_NUMBER >= 0x10100000L && defined(_MSC_VER)
++#pragma comment(lib, "crypt32.lib")
++#endif
++
+ struct ne_ssl_dname_s {
+     X509_NAME *dn;
+ };
+@@ -1139,11 +1153,11 @@
+  * point.  */
+ 
+ #ifndef _WIN32
+-static pthread_mutex_t *locks;
++static pthread_mutex_t *locks = NULL;
+ #else
+-static HANDLE *locks;
++static HANDLE *locks = NULL;
+ #endif
+-static size_t num_locks;
++static size_t num_locks = 0;
+ 
+ #ifndef HAVE_CRYPTO_SET_IDPTR_CALLBACK
+ /* Named to be obvious when it shows up in a backtrace. */
+diff -r -u neon-0.30.2/src/ne_props.h neon-0.30.2-p2/src/ne_props.h
+--- neon-0.30.2/src/ne_props.h	2006-02-28 04:28:34.000000000 +1100
++++ neon-0.30.2-p2/src/ne_props.h	2019-01-10 13:44:30.000000000 +1100
+@@ -62,21 +62,21 @@
+ /* Get the value of a given property. Will return NULL if there was an
+  * error fetching this property on this resource.  Call
+  * ne_propset_result to get the response-status if so.  */
+-const char *ne_propset_value(const ne_prop_result_set *set,
+-			      const ne_propname *propname);
++NEON_API(const char *) ne_propset_value(const ne_prop_result_set *set,
++			                const ne_propname *propname);
+ 
+ /* Returns the status structure for fetching the given property on
+  * this resource. This function will return NULL if the server did not
+  * return the property (which is a server error). */
+-const ne_status *ne_propset_status(const ne_prop_result_set *set,
+-				      const ne_propname *propname);
++NEON_API(const ne_status *) ne_propset_status(const ne_prop_result_set *set,
++				              const ne_propname *propname);
+ 
+ /* Returns the private pointer for the given propset. */
+-void *ne_propset_private(const ne_prop_result_set *set);
++NEON_API(void *) ne_propset_private(const ne_prop_result_set *set);
+ 
+ /* Return language string of property (may be NULL). */
+-const char *ne_propset_lang(const ne_prop_result_set *set,
+-			     const ne_propname *pname);
++NEON_API(const char *) ne_propset_lang(const ne_prop_result_set *set,
++			               const ne_propname *pname);
+ 
+ /* ne_propset_iterate iterates over a properties result set,
+  * calling the callback for each property in the set. userdata is
+@@ -88,9 +88,9 @@
+  * immediately with that value.
+  */
+ typedef int (*ne_propset_iterator)(void *userdata,
+-				    const ne_propname *pname,
+-				    const char *value,
+-				    const ne_status *status);
++				   const ne_propname *pname,
++				   const char *value,
++				   const ne_status *status);
+ 
+ /* Iterate over all the properties in 'set', calling 'iterator'
+  * for each, passing 'userdata' as the first argument to callback.
+@@ -98,8 +98,8 @@
+  * Returns:
+  *   whatever value iterator returns.
+  */
+-int ne_propset_iterate(const ne_prop_result_set *set,
+-			ne_propset_iterator iterator, void *userdata);
++NEON_API(int) ne_propset_iterate(const ne_prop_result_set *set,
++			         ne_propset_iterator iterator, void *userdata);
+ 
+ /* Callback for handling the results of fetching properties for a
+  * single resource (identified by URI 'uri').  The results are stored
+@@ -124,9 +124,9 @@
+  * the request.
+  *
+  * Returns NE_*.  */
+-int ne_simple_propfind(ne_session *sess, const char *path, int depth,
+-			const ne_propname *props,
+-			ne_props_result results, void *userdata);
++NEON_API(int) ne_simple_propfind(ne_session *sess, const char *path, int depth,
++			         const ne_propname *props,
++			         ne_props_result results, void *userdata);
+ 
+ /* The properties of a resource can be manipulated using ne_proppatch.
+  * A single proppatch request may include any number of individual
+@@ -152,15 +152,15 @@
+ /* Execute a set of property operations 'ops' on 'path'. 'ops' is an
+  * array terminated by an operation with a NULL 'name' field. Returns
+  * NE_*. */
+-int ne_proppatch(ne_session *sess, const char *path,
+-		 const ne_proppatch_operation *ops);
++NEON_API(int) ne_proppatch(ne_session *sess, const char *path,
++		           const ne_proppatch_operation *ops);
+ 
+ /* Retrieve property names for the resources at 'path'.  'results'
+  * callback is called for each resource.  Use 'ne_propset_iterate' on
+  * the passed results object to retrieve the list of property names.
+  * */
+-int ne_propnames(ne_session *sess, const char *path, int depth,
+-		 ne_props_result results, void *userdata);
++NEON_API(int) ne_propnames(ne_session *sess, const char *path, int depth,
++		           ne_props_result results, void *userdata);
+ 
+ /* The complex, you-do-all-the-work, property fetch interface:
+  */
+@@ -172,18 +172,18 @@
+  * given handler, as returned by the ne_props_create_complex callback
+  * installed using 'ne_propfind_set_private'.  If this callback was
+  * not registered, this function will return NULL.  */
+-void *ne_propfind_current_private(ne_propfind_handler *handler);
++NEON_API(void *) ne_propfind_current_private(ne_propfind_handler *handler);
+ 
+ /* Create a PROPFIND handler, for the given resource or set of 
+  * resources.
+  *
+  * Depth must be one of NE_DEPTH_*. */
+-ne_propfind_handler *
++NEON_API(ne_propfind_handler *)
+ ne_propfind_create(ne_session *sess, const char *path, int depth);
+ 
+ /* Return the XML parser for the given handler (only need if you want
+  * to handle complex properties). */
+-ne_xml_parser *ne_propfind_get_parser(ne_propfind_handler *handler);
++NEON_API(ne_xml_parser *) ne_propfind_get_parser(ne_propfind_handler *handler);
+ 
+ /* This interface reserves the state integer range 'x' where 0 < x
+  * and x < NE_PROPS_STATE_TOP. */
+@@ -194,7 +194,7 @@
+  * needed if for instance, you want to add extra headers to the
+  * PROPFIND request).  The result of using the request pointer after
+  * ne_propfind_destroy(handler) has been called is undefined. */
+-ne_request *ne_propfind_get_request(ne_propfind_handler *handler);
++NEON_API(ne_request *) ne_propfind_get_request(ne_propfind_handler *handler);
+ 
+ /* A "complex property" has a value which is structured XML. To handle
+  * complex properties, you must set up and register an XML handler
+@@ -220,16 +220,16 @@
+ typedef void *(*ne_props_create_complex)(void *userdata, const ne_uri *uri);
+ typedef void (*ne_props_destroy_complex)(void *userdata, void *complex);
+ 
+-void ne_propfind_set_private(ne_propfind_handler *handler,
+-			     ne_props_create_complex creator,
+-			     ne_props_destroy_complex destructor,
+-			     void *userdata);
++NEON_API(void) ne_propfind_set_private(ne_propfind_handler *handler,
++			               ne_props_create_complex creator,
++			               ne_props_destroy_complex destructor,
++			               void *userdata);
+ 
+ /* Fetch all properties.
+  *
+  * Returns NE_*. */
+-int ne_propfind_allprop(ne_propfind_handler *handler, 
+-			ne_props_result result, void *userdata);
++NEON_API(int) ne_propfind_allprop(ne_propfind_handler *handler, 
++			          ne_props_result result, void *userdata);
+ 
+ /* Fetch all properties with names listed in array 'names', which is
+  * terminated by a property with a NULL name field.  For each resource
+@@ -237,12 +237,12 @@
+  * 'userdata' as the first argument.
+  *
+  * Returns NE_*. */
+-int ne_propfind_named(ne_propfind_handler *handler, 
+-		      const ne_propname *names,
+-		      ne_props_result result, void *userdata);
++NEON_API(int) ne_propfind_named(ne_propfind_handler *handler, 
++		                const ne_propname *names,
++		                ne_props_result result, void *userdata);
+ 
+ /* Destroy a propfind handler after use. */
+-void ne_propfind_destroy(ne_propfind_handler *handler);
++NEON_API(void) ne_propfind_destroy(ne_propfind_handler *handler);
+ 
+ NE_END_DECLS
+ 
+diff -r -u neon-0.30.2/src/ne_redirect.h neon-0.30.2-p2/src/ne_redirect.h
+--- neon-0.30.2/src/ne_redirect.h	2007-07-16 16:40:03.000000000 +1000
++++ neon-0.30.2-p2/src/ne_redirect.h	2019-01-10 13:44:30.000000000 +1100
+@@ -30,12 +30,12 @@
+  * (30x) response is given for any request in this session, the
+  * request will fail with the NE_REDIRECT code, and the destination of
+  * the redirect can be retrieved using ne_redirect_location(). */
+-void ne_redirect_register(ne_session *sess);
++NEON_API(void) ne_redirect_register(ne_session *sess);
+ 
+ /* Returns location of last redirect for the session.  Returns NULL if
+  * no redirect has been encountered for given session, or the last
+  * redirect encountered could not be parsed. */
+-const ne_uri *ne_redirect_location(ne_session *sess);
++NEON_API(const ne_uri *) ne_redirect_location(ne_session *sess);
+ 
+ NE_END_DECLS
+ 
+diff -r -u neon-0.30.2/src/ne_request.c neon-0.30.2-p2/src/ne_request.c
+--- neon-0.30.2/src/ne_request.c	2013-07-27 04:33:54.000000000 +1000
++++ neon-0.30.2-p2/src/ne_request.c	2019-01-10 13:44:30.000000000 +1100
+@@ -66,6 +66,10 @@
+     struct body_reader *next;
+ };
+ 
++#if defined(_MSC_VER) && _MSC_VER >= 1400
++#define write _write
++#endif
++
+ struct field {
+     char *name, *value;
+     size_t vlen;
+diff -r -u neon-0.30.2/src/ne_request.h neon-0.30.2-p2/src/ne_request.h
+--- neon-0.30.2/src/ne_request.h	2013-07-27 03:51:23.000000000 +1000
++++ neon-0.30.2-p2/src/ne_request.h	2019-01-10 13:44:30.000000000 +1100
+@@ -47,17 +47,17 @@
+ /* Create a request in session 'sess', with given method and path.
+  * 'path' must conform to the 'abs_path' grammar in RFC2396, with an
+  * optional "? query" part, and MUST be URI-escaped by the caller. */
+-ne_request *ne_request_create(ne_session *sess,
+-			      const char *method, const char *path);
++NEON_API(ne_request *) ne_request_create(ne_session *sess,
++                                         const char *method, const char *path);
+ 
+ /* The request body will be taken from 'size' bytes of 'buffer'. */
+-void ne_set_request_body_buffer(ne_request *req, const char *buffer,
+-				size_t size);
++NEON_API(void) ne_set_request_body_buffer(ne_request *req, const char *buffer,
++                                          size_t size);
+ 
+ /* The request body will be taken from 'length' bytes read from the
+  * file descriptor 'fd', starting from file offset 'offset'. */
+-void ne_set_request_body_fd(ne_request *req, int fd,
+-                            ne_off_t offset, ne_off_t length);
++NEON_API(void) ne_set_request_body_fd(ne_request *req, int fd,
++                                      ne_off_t offset, ne_off_t length);
+ 
+ /* "Pull"-based request body provider: a callback which is invoked to
+  * provide blocks of request body on demand.
+@@ -73,7 +73,7 @@
+  *         0           : ignore 'buffer' contents, end of body.
+  *     0 < x <= buflen : buffer contains x bytes of body data.  */
+ typedef ssize_t (*ne_provide_body)(void *userdata, 
+-				   char *buffer, size_t buflen);
++                                   char *buffer, size_t buflen);
+ 
+ /* Install a callback which is invoked as needed to provide the
+  * request body, a block at a time.  The total size of the request
+@@ -81,8 +81,8 @@
+  * than 'length' bytes in total.  If 'length' is set to -1, then the
+  * total size of the request is unknown by the caller and chunked 
+  * tranfer will be used. */
+-void ne_set_request_body_provider(ne_request *req, ne_off_t length,
+-                                  ne_provide_body provider, void *userdata);
++NEON_API(void) ne_set_request_body_provider(ne_request *req, ne_off_t length,
++                                            ne_provide_body provider, void *userdata);
+ 
+ /* Handling response bodies; two callbacks must be provided:
+  *
+@@ -100,11 +100,11 @@
+ 
+ /* An 'acceptance' callback which only accepts 2xx-class responses.
+  * Ignores userdata. */
+-int ne_accept_2xx(void *userdata, ne_request *req, const ne_status *st);
++NEON_API(int) ne_accept_2xx(void *userdata, ne_request *req, const ne_status *st);
+ 
+ /* An acceptance callback which accepts all responses.  Ignores
+  * userdata. */
+-int ne_accept_always(void *userdata, ne_request *req, const ne_status *st);
++NEON_API(int) ne_accept_always(void *userdata, ne_request *req, const ne_status *st);
+ 
+ /* Callback for reading a block of data.  Returns zero on success, or
+  * non-zero on error.  If returning an error, the response will be
+@@ -124,14 +124,14 @@
+  * callback as the response is read.  After all the response body has
+  * been read, the callback will be called with a 'len' argument of
+  * zero.  */
+-void ne_add_response_body_reader(ne_request *req, ne_accept_response accpt,
+-				 ne_block_reader reader, void *userdata);
++NEON_API(void) ne_add_response_body_reader(ne_request *req, ne_accept_response accpt,
++                                           ne_block_reader reader, void *userdata);
+ 
+ /* Retrieve the value of the response header field with given name;
+  * returns NULL if no response header with given name was found.  The
+  * return value is valid only until the next call to either
+  * ne_request_destroy or ne_begin_request for this request. */
+-const char *ne_get_response_header(ne_request *req, const char *name);
++NEON_API(const char *) ne_get_response_header(ne_request *req, const char *name);
+ 
+ /* Iterator interface for response headers: if passed a NULL cursor,
+  * returns the first header; if passed a non-NULL cursor pointer,
+@@ -144,16 +144,16 @@
+  * the cursor and name/value pointers are valid only until the next
+  * call to either ne_request_destroy or ne_begin_request for this
+  * request. */
+-void *ne_response_header_iterate(ne_request *req, void *cursor,
+-                                 const char **name, const char **value);
++NEON_API(void *) ne_response_header_iterate(ne_request *req, void *cursor,
++                                            const char **name, const char **value);
+ 
+ /* Adds a header to the request with given name and value. */
+-void ne_add_request_header(ne_request *req, const char *name, 
+-			   const char *value);
++NEON_API(void) ne_add_request_header(ne_request *req, const char *name, 
++                                     const char *value);
+ /* Adds a header to the request with given name, using printf-like
+  * format arguments for the value. */
+-void ne_print_request_header(ne_request *req, const char *name,
+-			     const char *format, ...) 
++NEON_API(void) ne_print_request_header(ne_request *req, const char *name,
++                                       const char *format, ...) 
+     ne_attribute((format(printf, 3, 4)));
+ 
+ /* ne_request_dispatch: Sends the given request, and reads the
+@@ -166,17 +166,17 @@
+  * On any error, the session error string is set.  On success or
+  * authentication error, the actual response-status can be retrieved using
+  * ne_get_status(). */
+-int ne_request_dispatch(ne_request *req);
++NEON_API(int) ne_request_dispatch(ne_request *req);
+ 
+ /* Returns a pointer to the response status information for the given
+  * request; pointer is valid until request object is destroyed. */
+-const ne_status *ne_get_status(const ne_request *req) ne_attribute((const));
++NEON_API(const ne_status *) ne_get_status(const ne_request *req) ne_attribute((const));
+ 
+ /* Returns pointer to session associated with request. */
+-ne_session *ne_get_session(const ne_request *req) ne_attribute((const));
++NEON_API(ne_session *) ne_get_session(const ne_request *req) ne_attribute((const));
+ 
+ /* Destroy memory associated with request pointer */
+-void ne_request_destroy(ne_request *req);
++NEON_API(void) ne_request_destroy(ne_request *req);
+ 
+ /* "Caller-pulls" request interface.  This is an ALTERNATIVE interface
+  * to ne_request_dispatch: either use that, or do all this yourself:
+@@ -190,8 +190,8 @@
+  * ne_end_request and ne_begin_request both return an NE_* code; if
+  * ne_end_request returns NE_RETRY, you must restart the loop from (1)
+  * above. */
+-int ne_begin_request(ne_request *req);
+-int ne_end_request(ne_request *req);
++NEON_API(int) ne_begin_request(ne_request *req);
++NEON_API(int) ne_end_request(ne_request *req);
+ 
+ /* Read a block of the response into the passed buffer of size 'buflen'.
+  *
+@@ -200,16 +200,16 @@
+  *   0 - end of response
+  *  >0 - number of bytes read into buffer.
+  */
+-ssize_t ne_read_response_block(ne_request *req, char *buffer, size_t buflen);
++NEON_API(ssize_t) ne_read_response_block(ne_request *req, char *buffer, size_t buflen);
+ 
+ /* Read response blocks until end of response; exactly equivalent to
+  * calling ne_read_response_block() until it returns 0.  Returns
+  * non-zero on error. */
+-int ne_discard_response(ne_request *req);
++NEON_API(int) ne_discard_response(ne_request *req);
+ 
+ /* Read response blocks until end of response, writing content to the
+  * given file descriptor.  Returns NE_ERROR on error. */
+-int ne_read_response_to_fd(ne_request *req, int fd);
++NEON_API(int) ne_read_response_to_fd(ne_request *req, int fd);
+ 
+ /* Defined request flags: */
+ typedef enum ne_request_flag_e {
+@@ -224,11 +224,11 @@
+ } ne_request_flag;
+ 
+ /* Set a new value for a particular request flag. */
+-void ne_set_request_flag(ne_request *req, ne_request_flag flag, int value);
++NEON_API(void) ne_set_request_flag(ne_request *req, ne_request_flag flag, int value);
+ 
+ /* Return 0 if the given flag is not set, >0 it is set, or -1 if the
+  * flag is not supported. */
+-int ne_get_request_flag(ne_request *req, ne_request_flag flag);
++NEON_API(int) ne_get_request_flag(ne_request *req, ne_request_flag flag);
+ 
+ /**** Request hooks handling *****/
+ 
+@@ -239,17 +239,17 @@
+  * absolute URI if a proxy is in use, an absolute path, a "*", etc).
+  * A create_request hook is called exactly once per request. */
+ typedef void (*ne_create_request_fn)(ne_request *req, void *userdata,
+-				     const char *method, const char *requri);
+-void ne_hook_create_request(ne_session *sess, 
+-			    ne_create_request_fn fn, void *userdata);
++                                     const char *method, const char *requri);
++NEON_API(void) ne_hook_create_request(ne_session *sess, 
++                                      ne_create_request_fn fn, void *userdata);
+ 
+ /* Hook called before the request is sent.  'header' is the raw HTTP
+  * header before the trailing CRLF is added; more headers can be added
+  * here.  A pre_send hook may be called >1 time per request if the
+  * request is retried due to a post_send hook returning NE_RETRY. */
+ typedef void (*ne_pre_send_fn)(ne_request *req, void *userdata, 
+-			       ne_buffer *header);
+-void ne_hook_pre_send(ne_session *sess, ne_pre_send_fn fn, void *userdata);
++                               ne_buffer *header);
++NEON_API(void) ne_hook_pre_send(ne_session *sess, ne_pre_send_fn fn, void *userdata);
+ 
+ /* Hook called directly after the response headers have been read, but
+  * before the resposnse body has been read.  'status' is the response
+@@ -258,8 +258,8 @@
+  * NE_RETRY. */
+ typedef void (*ne_post_headers_fn)(ne_request *req, void *userdata,
+                                    const ne_status *status);
+-void ne_hook_post_headers(ne_session *sess, 
+-                          ne_post_headers_fn fn, void *userdata);
++NEON_API(void) ne_hook_post_headers(ne_session *sess, 
++                                    ne_post_headers_fn fn, void *userdata);
+ 
+ /* Hook called after the request is dispatched (request sent, and
+  * the entire response read).  If an error occurred reading the response,
+@@ -271,23 +271,23 @@
+  * also be set appropriately (ne_set_error).
+  */
+ typedef int (*ne_post_send_fn)(ne_request *req, void *userdata,
+-			       const ne_status *status);
+-void ne_hook_post_send(ne_session *sess, ne_post_send_fn fn, void *userdata);
++                               const ne_status *status);
++NEON_API(void) ne_hook_post_send(ne_session *sess, ne_post_send_fn fn, void *userdata);
+ 
+ /* Hook called when the function is destroyed. */
+ typedef void (*ne_destroy_req_fn)(ne_request *req, void *userdata);
+-void ne_hook_destroy_request(ne_session *sess,
+-			     ne_destroy_req_fn fn, void *userdata);
++NEON_API(void) ne_hook_destroy_request(ne_session *sess,
++                                       ne_destroy_req_fn fn, void *userdata);
+ 
+ typedef void (*ne_destroy_sess_fn)(void *userdata);
+ /* Hook called when the session is about to be destroyed. */
+-void ne_hook_destroy_session(ne_session *sess,
+-			     ne_destroy_sess_fn fn, void *userdata);
++NEON_API(void) ne_hook_destroy_session(ne_session *sess,
++                                       ne_destroy_sess_fn fn, void *userdata);
+ 
+ typedef void (*ne_close_conn_fn)(void *userdata);
+ /* Hook called when the connection is closed; note that this hook
+  * may be called *AFTER* the destroy_session hook. */
+-void ne_hook_close_conn(ne_session *sess, ne_close_conn_fn fn, void *userdata);
++NEON_API(void) ne_hook_close_conn(ne_session *sess, ne_close_conn_fn fn, void *userdata);
+ 
+ /* The ne_unhook_* functions remove a hook registered with the given
+  * session.  If a hook is found which was registered with a given
+@@ -296,22 +296,22 @@
+  *
+  * It is unsafe to use any of these functions from a hook function to
+  * unregister itself, except for ne_unhook_destroy_request. */
+-void ne_unhook_create_request(ne_session *sess, 
+-                              ne_create_request_fn fn, void *userdata);
+-void ne_unhook_pre_send(ne_session *sess, ne_pre_send_fn fn, void *userdata);
+-void ne_unhook_post_headers(ne_session *sess, ne_post_headers_fn fn, void *userdata);
+-void ne_unhook_post_send(ne_session *sess, ne_post_send_fn fn, void *userdata);
+-void ne_unhook_destroy_request(ne_session *sess,
+-                               ne_destroy_req_fn fn, void *userdata);
+-void ne_unhook_destroy_session(ne_session *sess,
+-                               ne_destroy_sess_fn fn, void *userdata);
+-void ne_unhook_close_conn(ne_session *sess, 
+-                          ne_close_conn_fn fn, void *userdata);
++NEON_API(void) ne_unhook_create_request(ne_session *sess, 
++                                        ne_create_request_fn fn, void *userdata);
++NEON_API(void) ne_unhook_pre_send(ne_session *sess, ne_pre_send_fn fn, void *userdata);
++NEON_API(void) ne_unhook_post_headers(ne_session *sess, ne_post_headers_fn fn, void *userdata);
++NEON_API(void) ne_unhook_post_send(ne_session *sess, ne_post_send_fn fn, void *userdata);
++NEON_API(void) ne_unhook_destroy_request(ne_session *sess,
++                                         ne_destroy_req_fn fn, void *userdata);
++NEON_API(void) ne_unhook_destroy_session(ne_session *sess,
++                                         ne_destroy_sess_fn fn, void *userdata);
++NEON_API(void) ne_unhook_close_conn(ne_session *sess, 
++                                    ne_close_conn_fn fn, void *userdata);
+ 
+ /* Store an opaque context for the request, 'priv' is returned by a
+  * call to ne_request_get_private with the same ID. */
+-void ne_set_request_private(ne_request *req, const char *id, void *priv);
+-void *ne_get_request_private(ne_request *req, const char *id);
++NEON_API(void) ne_set_request_private(ne_request *req, const char *id, void *priv);
++NEON_API(void *) ne_get_request_private(ne_request *req, const char *id);
+ 
+ NE_END_DECLS
+ 
+diff -r -u neon-0.30.2/src/ne_session.h neon-0.30.2-p2/src/ne_session.h
+--- neon-0.30.2/src/ne_session.h	2012-06-26 20:02:58.000000000 +1000
++++ neon-0.30.2-p2/src/ne_session.h	2019-01-10 13:44:30.000000000 +1100
+@@ -36,21 +36,21 @@
+ /* Create a session to the given server, using the given scheme.  If
+  * "https" is passed as the scheme, SSL will be used to connect to the
+  * server. */
+-ne_session *ne_session_create(const char *scheme,
+-			      const char *hostname, unsigned int port);
++NEON_API(ne_session *) ne_session_create(const char *scheme,
++                                         const char *hostname, unsigned int port);
+ 
+ /* Finish an HTTP session */
+-void ne_session_destroy(ne_session *sess);
++NEON_API(void) ne_session_destroy(ne_session *sess);
+ 
+ /* Prematurely force the connection to be closed for the given
+  * session. */
+-void ne_close_connection(ne_session *sess);
++NEON_API(void) ne_close_connection(ne_session *sess);
+ 
+ /* Configure an HTTP proxy server for the session.  This function will
+  * override (remove) any proxy servers previously configured, and must
+  * be called before any requests are created using this session. */
+-void ne_session_proxy(ne_session *sess,
+-		      const char *hostname, unsigned int port);
++NEON_API(void) ne_session_proxy(ne_session *sess,
++                                const char *hostname, unsigned int port);
+ 
+ /* Configure a SOCKS proxy server which will be used for the session.
+  * The SOCKS protocol version 'vers' will be used to contact the
+@@ -63,16 +63,16 @@
+  * This function will override (remove) any proxy servers previously
+  * configured, and must be called before any requests are created
+  * using this session. */
+-void ne_session_socks_proxy(ne_session *sess, enum ne_sock_sversion vers,
+-                            const char *hostname, unsigned int port,
+-                            const char *username, const char *password);
++NEON_API(void) ne_session_socks_proxy(ne_session *sess, enum ne_sock_sversion vers,
++                                      const char *hostname, unsigned int port,
++                                      const char *username, const char *password);
+ 
+ /* Configure use of proxy servers from any system-wide default sources
+  * which are configured at build time.  This function will override
+  * (remove) any proxy servers previously configured, and must be
+  * called before any requests are created using this session.  The
+  * 'flags' parameter must be zero.  */
+-void ne_session_system_proxy(ne_session *sess, unsigned int flags);
++NEON_API(void) ne_session_system_proxy(ne_session *sess, unsigned int flags);
+ 
+ /* Defined session flags: */
+ typedef enum ne_session_flag_e {
+@@ -104,11 +104,11 @@
+ } ne_session_flag;
+ 
+ /* Set a new value for a particular session flag. */
+-void ne_set_session_flag(ne_session *sess, ne_session_flag flag, int value);
++NEON_API(void) ne_set_session_flag(ne_session *sess, ne_session_flag flag, int value);
+ 
+ /* Return 0 if the given flag is not set, >0 it is set, or -1 if the
+  * flag is not supported. */
+-int ne_get_session_flag(ne_session *sess, ne_session_flag flag);
++NEON_API(int) ne_get_session_flag(ne_session *sess, ne_session_flag flag);
+ 
+ /* Bypass the normal name resolution; force the use of specific set of
+  * addresses for this session, addrs[0]...addrs[n-1].  The 'addrs'
+@@ -116,7 +116,7 @@
+  * destroyed.  This function will override (remove) any proxy servers
+  * previously configured, and must be called before any requests are
+  * created using this session.  */
+-void ne_set_addrlist(ne_session *sess, const ne_inet_addr **addrs, size_t n);
++NEON_API(void) ne_set_addrlist(ne_session *sess, const ne_inet_addr **addrs, size_t n);
+ 
+ /* Bypass the normal name resolution; force the use of specific set of
+  * addresses for this session, addrs[0]...addrs[n-1].  The 'addrs'
+@@ -125,14 +125,14 @@
+  * previously configured, and must be called before any requests are
+  * created using this session.  Port number 'port' will be used
+  * instead of the "real" session port, to connect to the proxy. */
+-void ne_set_addrlist2(ne_session *sess, unsigned int port, 
+-                      const ne_inet_addr **addrs, size_t n);
++NEON_API(void) ne_set_addrlist2(ne_session *sess, unsigned int port, 
++                                const ne_inet_addr **addrs, size_t n);
+ 
+ /* Bind connections to the specified local address.  If the address
+  * determined for the remote host has a different family (type) to
+  * 'addr', 'addr' will be ignored.  The 'addr' object must remain
+  * valid until the session is destroyed. */
+-void ne_set_localaddr(ne_session *sess, const ne_inet_addr *addr);
++NEON_API(void) ne_set_localaddr(ne_session *sess, const ne_inet_addr *addr);
+ 
+ /* DEPRECATED: Progress callback. */
+ typedef void (*ne_progress)(void *userdata, ne_off_t progress, ne_off_t total);
+@@ -148,12 +148,12 @@
+  * NOTE: Use of this interface is mutually exclusive with the use of
+  * ne_set_notifier().  A call to ne_set_progress() removes the
+  * notifier callback, and vice versa. */
+-void ne_set_progress(ne_session *sess, ne_progress progress, void *userdata);
++NEON_API(void) ne_set_progress(ne_session *sess, ne_progress progress, void *userdata);
+ 
+ /* Store an opaque context for the session, 'priv' is returned by a
+  * call to ne_session_get_private with the same ID. */
+-void ne_set_session_private(ne_session *sess, const char *id, void *priv);
+-void *ne_get_session_private(ne_session *sess, const char *id);
++NEON_API(void) ne_set_session_private(ne_session *sess, const char *id, void *priv);
++NEON_API(void *) ne_get_session_private(ne_session *sess, const char *id);
+ 
+ /* Status event type.  NOTE: More event types may be added in
+  * subsequent releases, so callers must ignore unknown status types
+@@ -212,7 +212,7 @@
+  * NOTE: Use of this interface is mutually exclusive with the use of
+  * ne_set_progress().  A call to ne_set_notifier() removes the
+  * progress callback, and vice versa. */
+-void ne_set_notifier(ne_session *sess, ne_notify_status status, void *userdata);
++NEON_API(void) ne_set_notifier(ne_session *sess, ne_notify_status status, void *userdata);
+ 
+ /* Certificate verification failures. */
+ 
+@@ -258,27 +258,27 @@
+  * callback must return zero to accept the certificate: a non-zero
+  * return value will fail the SSL negotiation. */
+ typedef int (*ne_ssl_verify_fn)(void *userdata, int failures,
+-				const ne_ssl_certificate *cert);
++                                const ne_ssl_certificate *cert);
+ 
+ /* Install a callback to handle server certificate verification.  This
+  * is required when the CA certificate is not known for the server
+  * certificate, or the server cert has other verification problems. */
+-void ne_ssl_set_verify(ne_session *sess, ne_ssl_verify_fn fn, void *userdata);
++NEON_API(void) ne_ssl_set_verify(ne_session *sess, ne_ssl_verify_fn fn, void *userdata);
+ 
+ /* Use the given client certificate for the session.  The client cert
+  * MUST be in the decrypted state, otherwise behaviour is undefined.
+  * The 'clicert' object is duplicated internally so can be destroyed
+  * by the caller.  */
+-void ne_ssl_set_clicert(ne_session *sess, const ne_ssl_client_cert *clicert);
++NEON_API(void) ne_ssl_set_clicert(ne_session *sess, const ne_ssl_client_cert *clicert);
+ 
+ /* Indicate that the certificate 'cert' is trusted; the 'cert' object
+  * is duplicated internally so can be destroyed by the caller.  This
+  * function has no effect for non-SSL sessions. */
+-void ne_ssl_trust_cert(ne_session *sess, const ne_ssl_certificate *cert);
++NEON_API(void) ne_ssl_trust_cert(ne_session *sess, const ne_ssl_certificate *cert);
+ 
+ /* If the SSL library provided a default set of CA certificates, trust
+  * this set of CAs. */
+-void ne_ssl_trust_default_ca(ne_session *sess);
++NEON_API(void) ne_ssl_trust_default_ca(ne_session *sess);
+ 
+ /* Callback used to load a client certificate on demand.  If dncount
+  * is > 0, the 'dnames' array dnames[0] through dnames[dncount-1]
+@@ -286,21 +286,21 @@
+  * acceptable.  The callback should load an appropriate client
+  * certificate and then pass it to 'ne_ssl_set_clicert'. */
+ typedef void (*ne_ssl_provide_fn)(void *userdata, ne_session *sess,
+-				  const ne_ssl_dname *const *dnames,
++                                  const ne_ssl_dname *const *dnames,
+                                   int dncount);
+ 
+ /* Register a function to be called when the server requests a client
+  * certificate. */
+-void ne_ssl_provide_clicert(ne_session *sess, 
+-                            ne_ssl_provide_fn fn, void *userdata);
++NEON_API(void) ne_ssl_provide_clicert(ne_session *sess, 
++                                      ne_ssl_provide_fn fn, void *userdata);
+ 
+ /* Set the timeout (in seconds) used when reading from a socket.  The
+  * timeout value must be greater than zero. */
+-void ne_set_read_timeout(ne_session *sess, int timeout);
++NEON_API(void) ne_set_read_timeout(ne_session *sess, int timeout);
+ 
+ /* Set the timeout (in seconds) used when making a connection.  The
+  * timeout value must be greater than zero. */
+-void ne_set_connect_timeout(ne_session *sess, int timeout);
++NEON_API(void) ne_set_connect_timeout(ne_session *sess, int timeout);
+ 
+ /* Sets the user-agent string. neon/VERSION will be appended, to make
+  * the full header "User-Agent: product neon/VERSION".
+@@ -309,25 +309,25 @@
+  *       product         = token ["/" product-version]
+  *       product-version = token
+  * where token is any alpha-numeric-y string [a-zA-Z0-9]* */
+-void ne_set_useragent(ne_session *sess, const char *product);
++NEON_API(void) ne_set_useragent(ne_session *sess, const char *product);
+ 
+ /* Returns non-zero if next-hop server does not claim compliance to
+  * HTTP/1.1 or later. */
+-int ne_version_pre_http11(ne_session *sess);
++NEON_API(int) ne_version_pre_http11(ne_session *sess);
+ 
+ /* Returns the 'hostport' URI segment for the end-server, e.g.
+  * "my.server.com:8080". */
+-const char *ne_get_server_hostport(ne_session *sess);
++NEON_API(const char *) ne_get_server_hostport(ne_session *sess);
+ 
+ /* Returns the URL scheme being used for the current session, omitting
+  * the trailing ':'; e.g. "http" or "https". */
+-const char *ne_get_scheme(ne_session *sess);
++NEON_API(const char *) ne_get_scheme(ne_session *sess);
+ 
+ /* Sets the host, scheme, and port fields of the given URI structure
+  * to that of the configured server and scheme for the session; host
+  * and scheme are malloc-allocated.  No other fields in the URI
+  * structure are changed. */
+-void ne_fill_server_uri(ne_session *sess, ne_uri *uri);
++NEON_API(void) ne_fill_server_uri(ne_session *sess, ne_uri *uri);
+ 
+ /* If a proxy is configured, sets the host and port fields in the
+  * given URI structure to that of the proxy.  If multiple proxies are
+@@ -335,15 +335,15 @@
+  * hostname is malloc-allocated.  No other fields in the URI structure
+  * are changed; if no proxy is configured or a non-HTTP proxy is in
+  * use, no fields are changed. */
+-void ne_fill_proxy_uri(ne_session *sess, ne_uri *uri);
++NEON_API(void) ne_fill_proxy_uri(ne_session *sess, ne_uri *uri);
+ 
+ /* Set the error string for the session; takes printf-like format
+  * string. */
+-void ne_set_error(ne_session *sess, const char *format, ...)
++NEON_API(void) ne_set_error(ne_session *sess, const char *format, ...)
+     ne_attribute((format (printf, 2, 3)));
+ 
+ /* Retrieve the error string for the session */
+-const char *ne_get_error(ne_session *sess);
++NEON_API(const char *) ne_get_error(ne_session *sess);
+ 
+ NE_END_DECLS
+ 
+diff -r -u neon-0.30.2/src/ne_socket.c neon-0.30.2-p2/src/ne_socket.c
+--- neon-0.30.2/src/ne_socket.c	2016-09-30 18:46:00.000000000 +1000
++++ neon-0.30.2-p2/src/ne_socket.c	2019-01-10 13:44:30.000000000 +1100
+@@ -107,6 +107,14 @@
+ #include <gnutls/gnutls.h>
+ #endif
+ 
++#ifdef _MSC_VER
++#pragma comment(lib, "ws2_32.lib")
++#endif
++
++#ifndef _WINSOCK2API_
++typedef int SOCKET;
++#endif
++
+ #define NE_INET_ADDR_DEFINED
+ /* A slightly ugly hack: change the ne_inet_addr definition to be the
+  * real address type used.  The API only exposes ne_inet_addr as a
+@@ -408,11 +416,11 @@
+      * correctly on Netware if not inside a compound statement
+      * block. */
+     if (rdwr == 0) {
+-        FD_SET(fdno, &rdfds);
++        FD_SET((SOCKET)fdno, &rdfds);
+     } else {
+-        FD_SET(fdno, &wrfds);
++        FD_SET((SOCKET)fdno, &wrfds);
+     }
+-    FD_SET(fdno, &exfds);
++    FD_SET((SOCKET)fdno, &exfds);
+ 
+     if (tvp) {
+         tvp->tv_sec = secs;
+@@ -1351,7 +1359,7 @@
+     {
+         int flag = 1;
+ 
+-        (void) setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &flag, sizeof flag);
++        (void) setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, (const char *) &flag, sizeof flag);
+         /* An error here is not fatal, so ignore it. */
+     }
+ #endif        
+@@ -1470,7 +1478,7 @@
+ #if defined(HAVE_SETSOCKOPT) && (defined(TCP_NODELAY) || defined(WIN32))
+     { /* Disable the Nagle algorithm. */
+         int flag = 1;
+-        setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, &flag, sizeof flag);
++        setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, (const char *) &flag, sizeof flag);
+     }
+ #endif
+     
+diff -r -u neon-0.30.2/src/ne_socket.h neon-0.30.2-p2/src/ne_socket.h
+--- neon-0.30.2/src/ne_socket.h	2011-09-02 19:51:02.000000000 +1000
++++ neon-0.30.2-p2/src/ne_socket.h	2019-01-10 13:44:30.000000000 +1100
+@@ -55,32 +55,32 @@
+ 
+ /* Perform process-global initialization of any libraries in use.
+  * Returns non-zero on error. */
+-int ne_sock_init(void);
++NEON_API(int) ne_sock_init(void);
+ 
+ /* Perform process-global shutdown of any libraries in use.  This
+  * function only has effect when it has been called an equal number of
+  * times to ne_sock_init() for the process. */
+-void ne_sock_exit(void);
++NEON_API(void) ne_sock_exit(void);
+ 
+ #define NE_ADDR_CANON (0x01)
+ /* Resolve the given hostname. Hex string IPv6 addresses (e.g. `::1')
+  * may be enclosed in brackets (e.g. `[::1]').  'flags' should be
+  * zero, or if NE_ADDR_CANON is passed, the canonical name for the
+  * hostname will be determind. */
+-ne_sock_addr *ne_addr_resolve(const char *hostname, int flags);
++NEON_API(ne_sock_addr *) ne_addr_resolve(const char *hostname, int flags);
+ 
+ /* Returns zero if name resolution was successful, non-zero on
+  * error. */
+-int ne_addr_result(const ne_sock_addr *addr);
++NEON_API(int) ne_addr_result(const ne_sock_addr *addr);
+ 
+ /* Returns the first network address associated with the 'addr'
+  * object.  Undefined behaviour if ne_addr_result returns non-zero for
+  * 'addr'; otherwise, never returns NULL.  */
+-const ne_inet_addr *ne_addr_first(ne_sock_addr *addr);
++NEON_API(const ne_inet_addr *) ne_addr_first(ne_sock_addr *addr);
+ 
+ /* Returns the next network address associated with the 'addr' object,
+  * or NULL if there are no more. */
+-const ne_inet_addr *ne_addr_next(ne_sock_addr *addr);
++NEON_API(const ne_inet_addr *) ne_addr_next(ne_sock_addr *addr);
+ 
+ /* NB: the pointers returned by ne_addr_first and ne_addr_next are
+  * valid until ne_addr_destroy is called for the corresponding
+@@ -88,15 +88,15 @@
+ 
+ /* If name resolution fails, copies the error string into 'buffer',
+  * which is of size 'bufsiz'.  'buffer' is returned. */
+-char *ne_addr_error(const ne_sock_addr *addr, char *buffer, size_t bufsiz);
++NEON_API(char *) ne_addr_error(const ne_sock_addr *addr, char *buffer, size_t bufsiz);
+ 
+ /* Returns the canonical name of the host as a NUL-terminated string,
+  * if NE_ADDR_CANON was used, and name resolution was successful.
+  * Otherwise, returns NULL. */
+-const char *ne_addr_canonical(const ne_sock_addr *addr);
++NEON_API(const char *) ne_addr_canonical(const ne_sock_addr *addr);
+ 
+ /* Destroys an address object created by ne_addr_resolve. */
+-void ne_addr_destroy(ne_sock_addr *addr);
++NEON_API(void) ne_addr_destroy(ne_sock_addr *addr);
+ 
+ /* Network address type; IPv4 or IPv6 */
+ typedef enum {
+@@ -108,41 +108,41 @@
+  * network byte order) of given type.  'raw' must be four bytes for an
+  * IPv4 address, 16 bytes for an IPv6 address.  May return NULL if
+  * address type is not supported. */
+-ne_inet_addr *ne_iaddr_make(ne_iaddr_type type, const unsigned char *raw);
++NEON_API(ne_inet_addr *) ne_iaddr_make(ne_iaddr_type type, const unsigned char *raw);
+ 
+ /* Compare two network address objects i1 and i2; returns zero if they
+  * are equivalent or non-zero otherwise.  */
+-int ne_iaddr_cmp(const ne_inet_addr *i1, const ne_inet_addr *i2);
++NEON_API(int) ne_iaddr_cmp(const ne_inet_addr *i1, const ne_inet_addr *i2);
+ 
+ /* Return the type of the given network address object. */
+-ne_iaddr_type ne_iaddr_typeof(const ne_inet_addr *ia);
++NEON_API(ne_iaddr_type) ne_iaddr_typeof(const ne_inet_addr *ia);
+ 
+ /* Print the string representation of network address 'ia' into the
+  * buffer 'buffer', which is of length 'bufsiz'.  Returns 'buffer'. */
+-char *ne_iaddr_print(const ne_inet_addr *ia, char *buffer, size_t bufsiz);
++NEON_API(char *) ne_iaddr_print(const ne_inet_addr *ia, char *buffer, size_t bufsiz);
+ 
+ /* Dump the raw byte representation (in network byte order) of address
+  * 'ia' into the buffer 'buffer', which must be of a suitable length
+  * (4 bytes for an IPv4 address, 16 bytes for an IPv6 address).
+  * Returns 'buffer'. */
+-unsigned char *ne_iaddr_raw(const ne_inet_addr *ia, unsigned char *buffer);
++NEON_API(unsigned char *) ne_iaddr_raw(const ne_inet_addr *ia, unsigned char *buffer);
+ 
+ /* Perform the reverse name lookup on network address 'ia', placing
+  * the returned name in the 'buf' buffer (of length 'bufsiz') if
+  * successful.  Returns zero on success, or non-zero on error. */
+-int ne_iaddr_reverse(const ne_inet_addr *ia, char *buf, size_t bufsiz);
++NEON_API(int) ne_iaddr_reverse(const ne_inet_addr *ia, char *buf, size_t bufsiz);
+ 
+ /* Convert network address string 'addr' (for example, "127.0.0.1")
+  * into a network address object.  Returns NULL on parse error.  If
+  * non-NULL, return value must be freed using ne_iaddr_free. */
+-ne_inet_addr *ne_iaddr_parse(const char *addr, ne_iaddr_type type);
++NEON_API(ne_inet_addr *) ne_iaddr_parse(const char *addr, ne_iaddr_type type);
+ 
+ /* Destroy a network address object created using ne_iaddr_make or
+  * ne_iaddr_parse. */
+-void ne_iaddr_free(ne_inet_addr *addr);
++NEON_API(void) ne_iaddr_free(ne_inet_addr *addr);
+ 
+ /* Create a socket object; returns NULL on error. */
+-ne_socket *ne_sock_create(void);
++NEON_API(ne_socket *) ne_sock_create(void);
+ 
+ /* Specify an address to which the local end of the socket will be
+  * bound during a subsequent ne_sock_connect() call.  If the address
+@@ -153,21 +153,21 @@
+  *
+  * (Note: This function is not equivalent to a BSD socket bind(), it
+  * only takes effect during the _connect() call). */
+-void ne_sock_prebind(ne_socket *sock, const ne_inet_addr *addr,
+-                     unsigned int port);
++NEON_API(void) ne_sock_prebind(ne_socket *sock, const ne_inet_addr *addr,
++                               unsigned int port);
+ 
+ /* Connect the socket to server at address 'addr' on port 'port'.
+  * Returns zero on success, NE_SOCK_TIMEOUT if a timeout occurs when a
+  * non-zero connect timeout is configured (and is supported), or
+  * NE_SOCK_ERROR on failure.  */
+-int ne_sock_connect(ne_socket *sock, const ne_inet_addr *addr, 
+-                    unsigned int port);
++NEON_API(int) ne_sock_connect(ne_socket *sock, const ne_inet_addr *addr, 
++                              unsigned int port);
+ 
+ /* Read up to 'count' bytes from socket into 'buffer'.  Returns:
+  *   NE_SOCK_* on error,
+  *   >0 length of data read into buffer (may be less than 'count')
+  */
+-ssize_t ne_sock_read(ne_socket *sock, char *buffer, size_t count);
++NEON_API(ssize_t) ne_sock_read(ne_socket *sock, char *buffer, size_t count);
+ 
+ /* Read up to 'count' bytes into 'buffer', leaving the data available
+  * in the socket buffer to be returned by a subsequent call to
+@@ -175,7 +175,7 @@
+  *   NE_SOCK_* on error,
+  *   >0 length of data read into buffer.
+  */
+-ssize_t ne_sock_peek(ne_socket *sock, char *buffer, size_t count);
++NEON_API(ssize_t) ne_sock_peek(ne_socket *sock, char *buffer, size_t count);
+ 
+ /* Block for up to 'n' seconds until data becomes available for reading
+  * from the socket. Returns:
+@@ -183,12 +183,12 @@
+  *  NE_SOCK_TIMEOUT if no data arrives in 'n' seconds,
+  *  0 if data arrived on the socket.
+  */
+-int ne_sock_block(ne_socket *sock, int n);
++NEON_API(int) ne_sock_block(ne_socket *sock, int n);
+ 
+ /* Write 'count' bytes of 'data' to the socket.  Guarantees to either
+  * write all the bytes or to fail.  Returns 0 on success, or NE_SOCK_*
+  * on error. */
+-int ne_sock_fullwrite(ne_socket *sock, const char *data, size_t count); 
++NEON_API(int) ne_sock_fullwrite(ne_socket *sock, const char *data, size_t count); 
+ 
+ /* I/O vector. */
+ struct ne_iovec {
+@@ -200,8 +200,8 @@
+  * Guarantees to either write all the bytes or to fail.  Count must be
+  * greater than zero and smaller than the system-defined maximum
+  * vector limit.  Returns 0 on success, or NE_SOCK_* on error. */
+-int ne_sock_fullwritev(ne_socket *sock, const struct ne_iovec *vector,
+-                       int count); 
++NEON_API(int) ne_sock_fullwritev(ne_socket *sock, const struct ne_iovec *vector,
++                                 int count); 
+ 
+ /* Read an LF-terminated line into 'buffer', and NUL-terminate it.
+  * At most 'len' bytes are read (including the NUL terminator).
+@@ -209,71 +209,71 @@
+  * NE_SOCK_* on error,
+  * >0 number of bytes read (including NUL terminator)
+  */
+-ssize_t ne_sock_readline(ne_socket *sock, char *buffer, size_t len);
++NEON_API(ssize_t) ne_sock_readline(ne_socket *sock, char *buffer, size_t len);
+ 
+ /* Read exactly 'len' bytes into buffer, or fail; returns 0 on
+  * success, NE_SOCK_* on error. */
+-ssize_t ne_sock_fullread(ne_socket *sock, char *buffer, size_t len);
++NEON_API(ssize_t) ne_sock_fullread(ne_socket *sock, char *buffer, size_t len);
+ 
+ /* Accepts a connection from listening socket 'fd' and places the
+  * socket in 'sock'.  Returns zero on success or -1 on failure. */
+-int ne_sock_accept(ne_socket *sock, int fd);
++NEON_API(int) ne_sock_accept(ne_socket *sock, int fd);
+ 
+ /* Returns the file descriptor used for socket 'sock'. */
+-int ne_sock_fd(const ne_socket *sock);
++NEON_API(int) ne_sock_fd(const ne_socket *sock);
+ 
+ /* Return address of peer, or NULL on error.  The returned address
+  * must be destroyed by caller using ne_iaddr_free. */
+-ne_inet_addr *ne_sock_peer(ne_socket *sock, unsigned int *port);
++NEON_API(ne_inet_addr *) ne_sock_peer(ne_socket *sock, unsigned int *port);
+ 
+ /* Close the socket and destroy the socket object.  If SSL is in use
+  * for the socket, a closure alert is sent to initiate a clean
+  * shutdown, but this function does not wait for the peer's response.
+  * Returns zero on success, or non-zero on failure. */
+-int ne_sock_close(ne_socket *sock);
++NEON_API(int) ne_sock_close(ne_socket *sock);
+ 
+ /* Return current error string for socket. */
+-const char *ne_sock_error(const ne_socket *sock);
++NEON_API(const char *) ne_sock_error(const ne_socket *sock);
+ 
+ /* Set the error string for the socket; takes printf-like format
+  * string. */
+-void ne_sock_set_error(ne_socket *sock, const char *format, ...)
++NEON_API(void) ne_sock_set_error(ne_socket *sock, const char *format, ...)
+     ne_attribute((format (printf, 2, 3)));
+ 
+ /* Set read timeout for socket, in seconds; must be a non-zero
+  * positive integer. */
+-void ne_sock_read_timeout(ne_socket *sock, int timeout);
++NEON_API(void) ne_sock_read_timeout(ne_socket *sock, int timeout);
+ 
+ /* Set connect timeout for socket, in seconds; must be a positive
+  * integer.  If a timeout of 'zero' is used then then no explicit
+  * timeout handling will be used for ne_sock_connect(), and the
+  * connect call will only timeout as dictated by the TCP stack. */
+-void ne_sock_connect_timeout(ne_socket *sock, int timeout);
++NEON_API(void) ne_sock_connect_timeout(ne_socket *sock, int timeout);
+ 
+ /* Negotiate an SSL connection on socket as an SSL server, using given
+  * SSL context. */
+-int ne_sock_accept_ssl(ne_socket *sock, ne_ssl_context *ctx);
++NEON_API(int) ne_sock_accept_ssl(ne_socket *sock, ne_ssl_context *ctx);
+ 
+ /* Negotiate an SSL connection on socket as an SSL client, using given
+  * SSL context.  The 'userdata' parameter is associated with the
+  * underlying SSL library's socket structure for use in callbacks.
+  * Returns zero on success, or non-zero on error. */
+-int ne_sock_connect_ssl(ne_socket *sock, ne_ssl_context *ctx,
+-                        void *userdata);
++NEON_API(int) ne_sock_connect_ssl(ne_socket *sock, ne_ssl_context *ctx,
++                                  void *userdata);
+ 
+ /* Retrieve the session ID of the current SSL session.  If 'buf' is
+  * non-NULL, on success, copies at most *buflen bytes to 'buf' and
+  * sets *buflen to the exact number of bytes copied.  If 'buf' is
+  * NULL, on success, sets *buflen to the length of the session ID.
+  * Returns zero on success, non-zero on error. */
+-int ne_sock_sessid(ne_socket *sock, unsigned char *buf, size_t *buflen);
++NEON_API(int) ne_sock_sessid(ne_socket *sock, unsigned char *buf, size_t *buflen);
+ 
+ /* Return human-readable name of SSL/TLS cipher used for connection,
+  * or NULL if none.  The format of this string is not intended to be
+  * fixed or parseable, but is informational only.  Return value is
+  * NUL-terminated malloc-allocated string if not NULL, which must be
+  * freed by the caller. */
+-char *ne_sock_cipher(ne_socket *sock);
++NEON_API(char *) ne_sock_cipher(ne_socket *sock);
+ 
+ /* SOCKS proxy protocol version: */
+ enum ne_sock_sversion {
+@@ -301,10 +301,10 @@
+  * socket error string is set.  On failure, the socket must be closed
+  * by the caller.
+  */
+-int ne_sock_proxy(ne_socket *sock, enum ne_sock_sversion vers,
+-                  const ne_inet_addr *addr, const char *hostname, 
+-                  unsigned int port,
+-                  const char *username, const char *password);
++NEON_API(int) ne_sock_proxy(ne_socket *sock, enum ne_sock_sversion vers,
++                            const ne_inet_addr *addr, const char *hostname, 
++                            unsigned int port,
++                            const char *username, const char *password);
+ 
+ NE_END_DECLS
+ 
+diff -r -u neon-0.30.2/src/ne_ssl.h neon-0.30.2-p2/src/ne_ssl.h
+--- neon-0.30.2/src/ne_ssl.h	2011-11-25 11:11:34.000000000 +1100
++++ neon-0.30.2-p2/src/ne_ssl.h	2019-01-10 13:44:30.000000000 +1100
+@@ -38,51 +38,51 @@
+  * name, intended to be human-readable (e.g. "Acme Ltd., Norfolk,
+  * GB").  Return value is a UTF-8-encoded malloc-allocated string and
+  * must be free'd by the caller. */
+-char *ne_ssl_readable_dname(const ne_ssl_dname *dn);
++NEON_API(char *) ne_ssl_readable_dname(const ne_ssl_dname *dn);
+ 
+ /* Returns zero if 'dn1' and 'dn2' refer to same name, or non-zero if
+  * they are different. */
+-int ne_ssl_dname_cmp(const ne_ssl_dname *dn1, const ne_ssl_dname *dn2);
++NEON_API(int) ne_ssl_dname_cmp(const ne_ssl_dname *dn1, const ne_ssl_dname *dn2);
+ 
+ /* An SSL certificate. */
+ typedef struct ne_ssl_certificate_s ne_ssl_certificate;
+ 
+ /* Read a certificate from a file in PEM format; returns NULL if the
+  * certificate could not be parsed. */
+-ne_ssl_certificate *ne_ssl_cert_read(const char *filename);
++NEON_API(ne_ssl_certificate *) ne_ssl_cert_read(const char *filename);
+ 
+ /* Write a certificate to a file in PEM format; returns non-zero if
+  * the certificate could not be written. */
+-int ne_ssl_cert_write(const ne_ssl_certificate *cert, const char *filename);
++NEON_API(int) ne_ssl_cert_write(const ne_ssl_certificate *cert, const char *filename);
+ 
+ /* Export a certificate to a base64-encoded, NUL-terminated string.
+  * The returned string is malloc-allocated and must be free()d by the
+  * caller. */
+-char *ne_ssl_cert_export(const ne_ssl_certificate *cert);
++NEON_API(char *) ne_ssl_cert_export(const ne_ssl_certificate *cert);
+ 
+ /* Import a certificate from a base64-encoded string as returned by
+  * ne_ssl_cert_export(). Returns a certificate object or NULL if
+  * 'data' was not valid. */
+-ne_ssl_certificate *ne_ssl_cert_import(const char *data);
++NEON_API(ne_ssl_certificate *) ne_ssl_cert_import(const char *data);
+ 
+ /* Returns the identity of the certificate, or NULL if none is given.
+  * For a server certificate this will be the hostname of the server to
+  * which the cert was issued.  A NUL-terminated UTF-8-encoded string
+  * is returned, which is valid for the lifetime of the certificate
+  * object. */
+-const char *ne_ssl_cert_identity(const ne_ssl_certificate *cert);
++NEON_API(const char *) ne_ssl_cert_identity(const ne_ssl_certificate *cert);
+ 
+ /* Return the certificate of the entity which signed certificate
+  * 'cert'.  Returns NULL if 'cert' is self-signed or the issuer
+  * certificate is not available; if non-NULL, the pointer is valid for
+  * the lifetime of the certificate object. */
+-const ne_ssl_certificate *ne_ssl_cert_signedby(const ne_ssl_certificate *cert);
++NEON_API(const ne_ssl_certificate *) ne_ssl_cert_signedby(const ne_ssl_certificate *cert);
+ 
+ /* Returns the distinguished name of the certificate issuer. */
+-const ne_ssl_dname *ne_ssl_cert_issuer(const ne_ssl_certificate *cert);
++NEON_API(const ne_ssl_dname *) ne_ssl_cert_issuer(const ne_ssl_certificate *cert);
+ 
+ /* Returns the distinguished name of the certificate subject. */
+-const ne_ssl_dname *ne_ssl_cert_subject(const ne_ssl_certificate *cert);
++NEON_API(const ne_ssl_dname *) ne_ssl_cert_subject(const ne_ssl_certificate *cert);
+ 
+ #define NE_SSL_DIGESTLEN (60)
+ 
+@@ -91,13 +91,13 @@
+  * Returns zero on success or non-zero if there was an internal error
+  * whilst calculating the digest.  'digest' must be at least 
+  * NE_SSL_DIGESTLEN bytes in length. */
+-int ne_ssl_cert_digest(const ne_ssl_certificate *cert, char *digest);
++NEON_API(int) ne_ssl_cert_digest(const ne_ssl_certificate *cert, char *digest);
+ 
+ /* Copy the validity times for the certificate 'cert' into 'from' and
+  * 'until' (either may be NULL).  If the time cannot be represented by
+  * a time_t value, then (time_t)-1 will be written. */
+-void ne_ssl_cert_validity_time(const ne_ssl_certificate *cert,
+-                               time_t *from, time_t *until);
++NEON_API(void) ne_ssl_cert_validity_time(const ne_ssl_certificate *cert,
++                                         time_t *from, time_t *until);
+ 
+ #define NE_SSL_VDATELEN (30)
+ /* Copy the validity times into buffers 'from' and 'until' as
+@@ -105,16 +105,16 @@
+  * formatting (and not localized, so always using English month/week
+  * names).  The buffers must be at least NE_SSL_VDATELEN bytes in
+  * length, and either may be NULL. */
+-void ne_ssl_cert_validity(const ne_ssl_certificate *cert,
+-                          char *from, char *until);
++NEON_API(void) ne_ssl_cert_validity(const ne_ssl_certificate *cert,
++                                    char *from, char *until);
+ 
+ /* Returns zero if 'c1' and 'c2' refer to the same certificate, or
+  * non-zero otherwise. */
+-int ne_ssl_cert_cmp(const ne_ssl_certificate *c1,
+-                    const ne_ssl_certificate *c2);
++NEON_API(int) ne_ssl_cert_cmp(const ne_ssl_certificate *c1,
++                              const ne_ssl_certificate *c2);
+ 
+ /* Deallocate memory associated with certificate. */
+-void ne_ssl_cert_free(ne_ssl_certificate *cert);
++NEON_API(void) ne_ssl_cert_free(ne_ssl_certificate *cert);
+ 
+ /* A client certificate (and private key).  A client certificate
+  * object has state; the object is either in the "encrypted" or
+@@ -125,40 +125,40 @@
+  * file 'filename'; returns NULL if the file could not be parsed, or
+  * otherwise returning a client certificate object.  The returned
+  * object may be in either the encrypted or decrypted state. */
+-ne_ssl_client_cert *ne_ssl_clicert_read(const char *filename);
++NEON_API(ne_ssl_client_cert *) ne_ssl_clicert_read(const char *filename);
+ 
+ /* Read a client certificate (and private key) in PKCS#12 format from
+  * 'buffer', of length 'buflen', returning NULL if the certificate
+  * could not be parsed, or otherwise returning a client certificate
+  * object.  The returned object may be in either the encrypted or
+  * decrypted state. */
+-ne_ssl_client_cert *ne_ssl_clicert_import(const unsigned char *buffer, 
+-                                          size_t buflen);
++NEON_API(ne_ssl_client_cert *) ne_ssl_clicert_import(const unsigned char *buffer, 
++                                                     size_t buflen);
+ 
+ /* Returns non-zero if client cert is in the encrypted state. */
+-int ne_ssl_clicert_encrypted(const ne_ssl_client_cert *ccert);
++NEON_API(int) ne_ssl_clicert_encrypted(const ne_ssl_client_cert *ccert);
+ 
+ /* Returns the "friendly name" given for the client cert, or NULL if
+  * none given.  Returns a NUL-terminated, UTF-8-encoded string.  This
+  * function may be used on a ccert object in either encrypted or
+  * decrypted state. */
+-const char *ne_ssl_clicert_name(const ne_ssl_client_cert *ccert);
++NEON_API(const char *) ne_ssl_clicert_name(const ne_ssl_client_cert *ccert);
+ 
+ /* Decrypt the encrypted client cert using the given password.
+  * Returns non-zero on failure, in which case, the ccert object
+  * remains in the encrypted state and the function may be called again
+  * with a different password.  This function has undefined behaviour
+  * for a ccert object which is in the decrypted state. */
+-int ne_ssl_clicert_decrypt(ne_ssl_client_cert *ccert, const char *password);
++NEON_API(int) ne_ssl_clicert_decrypt(ne_ssl_client_cert *ccert, const char *password);
+ 
+ /* Return the actual certificate part of the client certificate (never
+  * returns NULL).  This function has undefined behaviour for a ccert
+  * object which is in the encrypted state. */
+-const ne_ssl_certificate *ne_ssl_clicert_owner(const ne_ssl_client_cert *ccert);
++NEON_API(const ne_ssl_certificate *) ne_ssl_clicert_owner(const ne_ssl_client_cert *ccert);
+ 
+ /* Destroy a client certificate object.  This function may be used on
+  * a ccert object in either the encrypted or decrypted state. */
+-void ne_ssl_clicert_free(ne_ssl_client_cert *ccert);
++NEON_API(void) ne_ssl_clicert_free(ne_ssl_client_cert *ccert);
+ 
+ 
+ /* SSL context object.  The interfaces to manipulate an SSL context
+@@ -171,30 +171,30 @@
+ #define NE_SSL_CTX_SERVERv2 (2) /* SSLv2-specific server context */
+ 
+ /* Create an SSL context. */
+-ne_ssl_context *ne_ssl_context_create(int mode);
++NEON_API(ne_ssl_context *) ne_ssl_context_create(int mode);
+ 
+ /* Client mode: trust the given certificate 'cert' in context 'ctx'. */
+-void ne_ssl_context_trustcert(ne_ssl_context *ctx, const ne_ssl_certificate *cert);
++NEON_API(void) ne_ssl_context_trustcert(ne_ssl_context *ctx, const ne_ssl_certificate *cert);
+ 
+ /* Server mode: use given cert and key (filenames to PEM certificates). */
+-int ne_ssl_context_keypair(ne_ssl_context *ctx,
+-                           const char *cert, const char *key);
++NEON_API(int) ne_ssl_context_keypair(ne_ssl_context *ctx,
++                                     const char *cert, const char *key);
+ 
+ /* Server mode: set client cert verification options: required is non-zero if 
+  * a client cert is required, if ca_names is non-NULL it is a filename containing
+  * a set of PEM certs from which CA names are sent in the ccert request. */
+-int ne_ssl_context_set_verify(ne_ssl_context *ctx, int required,
+-                              const char *ca_names, const char *verify_cas);
++NEON_API(int) ne_ssl_context_set_verify(ne_ssl_context *ctx, int required,
++                                        const char *ca_names, const char *verify_cas);
+ 
+ #define NE_SSL_CTX_SSLv2 (0)
+ /* Set a flag for the SSL context. */
+-void ne_ssl_context_set_flag(ne_ssl_context *ctx, int flag, int value);
++NEON_API(void) ne_ssl_context_set_flag(ne_ssl_context *ctx, int flag, int value);
+ 
+ /* Return flag value. */
+-int ne_ssl_context_get_flag(ne_ssl_context *ctx, int flag);
++NEON_API(int) ne_ssl_context_get_flag(ne_ssl_context *ctx, int flag);
+ 
+ /* Destroy an SSL context. */
+-void ne_ssl_context_destroy(ne_ssl_context *ctx);
++NEON_API(void) ne_ssl_context_destroy(ne_ssl_context *ctx);
+ 
+ NE_END_DECLS
+ 
+diff -r -u neon-0.30.2/src/ne_sspi.c neon-0.30.2-p2/src/ne_sspi.c
+--- neon-0.30.2/src/ne_sspi.c	2012-07-06 06:41:43.000000000 +1000
++++ neon-0.30.2-p2/src/ne_sspi.c	2019-01-10 13:44:30.000000000 +1100
+@@ -337,7 +337,7 @@
+  */
+ static char *canonical_hostname(const char *serverName)
+ {
+-    const char *hostname;
++    char *hostname;
+     ne_sock_addr *addr;
+     
+     addr = ne_addr_resolve(serverName, NE_ADDR_CANON);
+diff -r -u neon-0.30.2/src/ne_sspi.h neon-0.30.2-p2/src/ne_sspi.h
+--- neon-0.30.2/src/ne_sspi.h	2006-02-12 23:05:14.000000000 +1100
++++ neon-0.30.2-p2/src/ne_sspi.h	2019-01-10 13:44:30.000000000 +1100
+@@ -31,17 +31,17 @@
+ #define SECURITY_WIN32
+ #include <security.h>
+ 
+-int ne_sspi_init(void);
+-int ne_sspi_deinit(void);
++NEON_API(int) ne_sspi_init(void);
++NEON_API(int) ne_sspi_deinit(void);
+ 
+-int ne_sspi_create_context(void **context, char * serverName, int ntlm);
++NEON_API(int) ne_sspi_create_context(void **context, char * serverName, int ntlm);
+ 
+-int ne_sspi_destroy_context(void *context);
++NEON_API(int) ne_sspi_destroy_context(void *context);
+ 
+-int ne_sspi_clear_context(void *context);
++NEON_API(int) ne_sspi_clear_context(void *context);
+ 
+-int ne_sspi_authenticate(void *context, const char *base64Token,
+-                         char **responseToken);
++NEON_API(int) ne_sspi_authenticate(void *context, const char *base64Token,
++                                   char **responseToken);
+ 
+ #endif /* HAVE_SSPI */
+ 
+diff -r -u neon-0.30.2/src/ne_string.h neon-0.30.2-p2/src/ne_string.h
+--- neon-0.30.2/src/ne_string.h	2009-08-12 01:50:33.000000000 +1000
++++ neon-0.30.2-p2/src/ne_string.h	2019-01-10 13:44:30.000000000 +1100
+@@ -37,26 +37,26 @@
+  * character was found.
+  * 
+  * ne_qtoken will return NULL if unterminated quotes are found. */
+-char *ne_token(char **str, char sep);
+-char *ne_qtoken(char **str, char sep, const char *quotes);
++NEON_API(char *) ne_token(char **str, char sep);
++NEON_API(char *) ne_qtoken(char **str, char sep, const char *quotes);
+ 
+ /* Return portion of 'str' with any characters in 'whitespace' shaved
+  * off the beginning and end.  Modifies str in-place. */
+-char *ne_shave(char *str, const char *whitespace);
++NEON_API(char *) ne_shave(char *str, const char *whitespace);
+ 
+ /* Cleanse 'str' of non-printable (e.g. control) characters.  'str' is
+  * modified in-place, and returned. */
+-char *ne_strclean(char *str);
++NEON_API(char *) ne_strclean(char *str);
+ 
+ /* Encode 'len' bytes of 'text' to base64.  Returns malloc-allocated
+  * NUL-terminated buffer which the caller must free(). */
+-char *ne_base64(const unsigned char *text, size_t len);
++NEON_API(char *) ne_base64(const unsigned char *text, size_t len);
+ 
+ /* Decode NUL-terminated base64-encoded string 'data', placing
+  * malloc-allocated raw decoder output in '*out'.  Returns length, or
+  * zero on decode error (in which case the content of *out is
+  * undefined). */
+-size_t ne_unbase64(const char *data, unsigned char **out);
++NEON_API(size_t) ne_unbase64(const char *data, unsigned char **out);
+ 
+ /* Dynamically-allocated string buffer.  A string buffer which grows
+  * dynamically . (Strings are zero-terminated still).  A
+@@ -68,11 +68,11 @@
+ } ne_buffer;
+ 
+ /* Create a new string buffer object. */
+-ne_buffer *ne_buffer_create(void);
++NEON_API(ne_buffer *) ne_buffer_create(void);
+ 
+ /* Create a new string buffer object with at least 'size' bytes of
+  * allocated space. */
+-ne_buffer *ne_buffer_ncreate(size_t size);
++NEON_API(ne_buffer *) ne_buffer_ncreate(size_t size);
+ 
+ /* Returns size of data in buffer, equiv to strlen(ne_buffer_data(buf)) */
+ #define ne_buffer_size(buf) ((buf)->used - 1)
+@@ -80,28 +80,28 @@
+ /* Concatenate all given strings onto the end of the buffer.  The
+  * strings must all be NUL-terminated, and MUST be followed by a NULL
+  * argument marking the end of the list.  */
+-void ne_buffer_concat(ne_buffer *buf, ...)
++NEON_API(void) ne_buffer_concat(ne_buffer *buf, ...)
+     ne_attribute_sentinel;
+ 
+ /* Append a NUL-terminated string 'str' to buf. */
+-void ne_buffer_zappend(ne_buffer *buf, const char *str);
++NEON_API(void) ne_buffer_zappend(ne_buffer *buf, const char *str);
+ 
+ /* Append 'len' bytes of 'data' to buf, where 'data' does not contain
+  * a NUL terminator.  (A NUL terminator is appended to buf) */
+-void ne_buffer_append(ne_buffer *buf, const char *data, size_t len);
++NEON_API(void) ne_buffer_append(ne_buffer *buf, const char *data, size_t len);
+ 
+ /* Append 'len' bytes of 'data' to buf.  All non-ASCII bytes, and
+  * ASCII control characters, are escaped.  (Note that this includes
+  * the NUL byte). */
+-void ne_buffer_qappend(ne_buffer *buf, const unsigned char *data, size_t len);
++NEON_API(void) ne_buffer_qappend(ne_buffer *buf, const unsigned char *data, size_t len);
+ 
+ /* Print a string to the end of the buffer using printf-style format
+  * string 'format' and subsqeuent arguments.  At most 'max' characters
+  * are appended; the number of characters appended (excluding the NUL
+  * terminator) is returned.  Behaviour is undefined if 'max' is passed
+  * as zero. */
+-size_t ne_buffer_snprintf(ne_buffer *buf, size_t max, 
+-                          const char *format, ...)
++NEON_API(size_t) ne_buffer_snprintf(ne_buffer *buf, size_t max, 
++                                    const char *format, ...)
+     ne_attribute((format(printf, 3, 4)));
+ 
+ /* Append a literal, NUL-terminated constant string 'str' to buffer
+@@ -111,28 +111,28 @@
+ 
+ /* Clear the string buffer 'buf', making it equivalent to the empty
+  * string. */
+-void ne_buffer_clear(ne_buffer *buf);
++NEON_API(void) ne_buffer_clear(ne_buffer *buf);
+ 
+ /* Grow the allocated size of string buffer 'buf' to at least 'size'
+  * bytes. */
+-void ne_buffer_grow(ne_buffer *buf, size_t size);
++NEON_API(void) ne_buffer_grow(ne_buffer *buf, size_t size);
+ 
+ /* Re-establish the 'used' invariant if the string buffer data field is
+  * altered directly. */
+-void ne_buffer_altered(ne_buffer *buf);
++NEON_API(void) ne_buffer_altered(ne_buffer *buf);
+ 
+ /* Destroy the string buffer object 'buf' without deallocating the
+  * data string.  The data string must subsequently be freed using
+  * ne_free(). */
+-char *ne_buffer_finish(ne_buffer *buf);
++NEON_API(char *) ne_buffer_finish(ne_buffer *buf);
+ 
+ /* Destroy a string buffer object. */
+-void ne_buffer_destroy(ne_buffer *buf);
++NEON_API(void) ne_buffer_destroy(ne_buffer *buf);
+ 
+ /* Thread-safe strerror() wrapper; place system error for errno value
+  * 'errnum' in 'buffer', which is of length 'buflen'.  Returns
+  * 'buffer'. */
+-char *ne_strerror(int errnum, char *buffer, size_t buflen);
++NEON_API(char *) ne_strerror(int errnum, char *buffer, size_t buflen);
+ 
+ /* ne_strnzcpy copies at most 'n'-1 bytes of 'src' to 'dest', and
+  * ensures that 'dest' is subsequently NUL-terminated. */
+@@ -142,20 +142,20 @@
+ /* Return a malloc-allocated copy of 'data', of length 'len', with all
+  * non-ASCII bytes, and ASCII control characters escaped.  (Note that
+  * the escaping includes the NUL byte). */
+-char *ne_strnqdup(const unsigned char *data, size_t len);
++NEON_API(char *) ne_strnqdup(const unsigned char *data, size_t len);
+ 
+ /* Return malloc-allocated concatenation of all NUL-terminated string
+  * arguments, up to a terminating NULL pointer. */
+-char *ne_concat(const char *str, ...)
++NEON_API(char *) ne_concat(const char *str, ...)
+     ne_attribute_sentinel;
+ 
+ /* Wrapper for snprintf: always NUL-terminates returned buffer, and
+  * returns strlen(str). */
+-size_t ne_snprintf(char *str, size_t size, const char *fmt, ...)
++NEON_API(size_t) ne_snprintf(char *str, size_t size, const char *fmt, ...)
+     ne_attribute((format(printf, 3, 4)));
+ 
+ /* Wrapper for vsnprintf. */
+-size_t ne_vsnprintf(char *str, size_t size, const char *fmt, va_list ap)
++NEON_API(size_t) ne_vsnprintf(char *str, size_t size, const char *fmt, va_list ap)
+     ne_attribute((format(printf, 3, 0)));
+ 
+ /* Implementations of strcasecmp and strncasecmp which behave as
+@@ -163,17 +163,17 @@
+  * POSIX locale; i.e. ignoring the process locale. */
+ 
+ /* Compares 's1' and 's2', ignoring differences in case. */
+-int ne_strcasecmp(const char *s1, const char *s2);
++NEON_API(int) ne_strcasecmp(const char *s1, const char *s2);
+ /* Compares up to 'n' characters of 's1' and 's2', ignoring
+  * differences in case. */
+-int ne_strncasecmp(const char *s1, const char *s2, size_t n);
++NEON_API(int) ne_strncasecmp(const char *s1, const char *s2, size_t n);
+ 
+ /* Return lowercase 'c' as in POSIX locale; note difference from ANSI
+  * C semantics as both the argument and return value are unsigned
+  * char. */
+ #define ne_tolower(c) (ne_tolower_array()[(unsigned char)c])
+ 
+-const unsigned char *ne_tolower_array(void);
++NEON_API(const unsigned char *) ne_tolower_array(void);
+ 
+ /* Convert an ASCII hexadecimal character in the ranges '0'..'9'
+  * 'a'..'f' 'A'..'F' to its numeric equivalent. */
+diff -r -u neon-0.30.2/src/ne_uri.h neon-0.30.2-p2/src/ne_uri.h
+--- neon-0.30.2/src/ne_uri.h	2008-08-06 01:32:47.000000000 +1000
++++ neon-0.30.2-p2/src/ne_uri.h	2019-01-10 13:44:30.000000000 +1100
+@@ -30,30 +30,30 @@
+  * "unreserved" and the forward-slash character percent-encoded
+  * according to the URI encoding rules.  Returns a malloc-allocated
+  * string and never NULL. */
+-char *ne_path_escape(const char *path);
++NEON_API(char *) ne_path_escape(const char *path);
+ 
+ /* Return a decoded copy of a percent-encoded path string. Returns
+  * malloc-allocated path on success, or NULL if the string contained
+  * any syntactically invalid percent-encoding sequences. */
+-char *ne_path_unescape(const char *epath);
++NEON_API(char *) ne_path_unescape(const char *epath);
+ 
+ /* Returns malloc-allocated parent of path, or NULL if path has no
+  * parent (such as "/"). */
+-char *ne_path_parent(const char *path);
++NEON_API(char *) ne_path_parent(const char *path);
+ 
+ /* Returns strcmp-like value giving comparison between p1 and p2,
+  * ignoring trailing-slashes. */
+-int ne_path_compare(const char *p1, const char *p2);
++NEON_API(int) ne_path_compare(const char *p1, const char *p2);
+ 
+ /* Returns non-zero if child is a child of parent */
+-int ne_path_childof(const char *parent, const char *child);
++NEON_API(int) ne_path_childof(const char *parent, const char *child);
+ 
+ /* Returns non-zero if path has a trailing slash character */
+-int ne_path_has_trailing_slash(const char *path);
++NEON_API(int) ne_path_has_trailing_slash(const char *path);
+ 
+ /* Return the default port for the given scheme, or 0 if none is
+  * known. */
+-unsigned int ne_uri_defaultport(const char *scheme);
++NEON_API(unsigned int) ne_uri_defaultport(const char *scheme);
+ 
+ typedef struct {
+     char *scheme;
+@@ -68,11 +68,11 @@
+  * NULL, or point to malloc-allocated NUL-terminated strings;
+  * ne_uri_free can be used to free any set fields.  On success,
+  * parsed->path is guaranteed to be non-NULL. */
+-int ne_uri_parse(const char *uri, ne_uri *parsed);
++NEON_API(int) ne_uri_parse(const char *uri, ne_uri *parsed);
+ 
+ /* Turns a URI structure back into a string.  The returned string is
+  * malloc-allocated, and must be freed by the caller. */
+-char *ne_uri_unparse(const ne_uri *uri);
++NEON_API(char *) ne_uri_unparse(const ne_uri *uri);
+ 
+ /* Resolve a relative URI 'relative', with respect to base URI 'base',
+  * placing the resultant URI in '*result'.  At least both base->path
+@@ -81,21 +81,21 @@
+  * malloc-allocated NUL-terminated strings.  result->path is
+  * guaranteed to be non-NULL.  ne_uri_free can be used to free the
+  * result structure after use.  Returns 'result'. */
+-ne_uri *ne_uri_resolve(const ne_uri *base, const ne_uri *relative,
+-                       ne_uri *result);
++NEON_API(ne_uri *) ne_uri_resolve(const ne_uri *base, const ne_uri *relative,
++                                  ne_uri *result);
+ 
+ /* Compares URIs u1 and u2, returns non-zero if they are found to be
+  * non-equal.  The sign of the return value is <0 if 'u1' is less than
+  * 'u2', or >0 if 'u2' is greater than 'u1'. */
+-int ne_uri_cmp(const ne_uri *u1, const ne_uri *u2);
++NEON_API(int) ne_uri_cmp(const ne_uri *u1, const ne_uri *u2);
+ 
+ /* Copy components of URI 'src' to destination 'dest'.  Returns
+  * 'dest'. */
+-ne_uri *ne_uri_copy(ne_uri *dest, const ne_uri *src);
++NEON_API(ne_uri *) ne_uri_copy(ne_uri *dest, const ne_uri *src);
+ 
+ /* Frees any non-NULL fields of parsed URI structure *parsed.  All
+  * fields are then zero-initialized. */
+-void ne_uri_free(ne_uri *parsed);
++NEON_API(void) ne_uri_free(ne_uri *parsed);
+ 
+ NE_END_DECLS
+ 
+diff -r -u neon-0.30.2/src/ne_utils.h neon-0.30.2-p2/src/ne_utils.h
+--- neon-0.30.2/src/ne_utils.h	2009-11-13 20:29:37.000000000 +1100
++++ neon-0.30.2-p2/src/ne_utils.h	2019-01-10 13:44:30.000000000 +1100
+@@ -38,13 +38,13 @@
+ /* Returns a human-readable library version string describing the
+  * version and build information; for example: 
+  *    "neon 0.2.0: Library build, OpenSSL support" */
+-const char *ne_version_string(void);
++NEON_API(const char *) ne_version_string(void);
+ 
+ /* Returns non-zero if library version is not of major version
+  * 'major', or if minor version is not greater than or equal to
+  * 'minor'.  For neon versions with major == 0, all minor versions are
+  * presumed to be incompatible.  */
+-int ne_version_match(int major, int minor);
++NEON_API(int) ne_version_match(int major, int minor);
+ 
+ /* Feature codes: */
+ #define NE_FEATURE_SSL (1) /* SSL/TLS support */
+@@ -58,7 +58,7 @@
+ 
+ /* Returns non-zero if library is built with support for the given
+  * NE_FEATURE_* feature code 'code'. */
+-int ne_has_support(int feature);
++NEON_API(int) ne_has_support(int feature);
+ 
+ /* Debugging macro to allow code to be optimized out if debugging is
+  * disabled at build time. */
+@@ -83,16 +83,16 @@
+ /* Send debugging output to 'stream', for all of the given debug
+  * channels.  To disable debugging, pass 'stream' as NULL and 'mask'
+  * as 0. */
+-void ne_debug_init(FILE *stream, int mask);
++NEON_API(void) ne_debug_init(FILE *stream, int mask);
+ 
+ /* The current debug mask and stream set by the last call to
+  * ne_debug_init. */
+-extern int ne_debug_mask;
+-extern FILE *ne_debug_stream;
++extern NEON_LINKAGE int ne_debug_mask;
++extern NEON_LINKAGE FILE * ne_debug_stream;
+ 
+ /* Produce debug output if any of channels 'ch' is enabled for
+  * debugging. */
+-void ne_debug(int ch, const char *, ...) ne_attribute((format(printf, 2, 3)));
++NEON_API(void) ne_debug(int ch, const char *, ...) ne_attribute((format(printf, 2, 3)));
+ 
+ /* Storing an HTTP status result */
+ typedef struct {
+@@ -111,7 +111,7 @@
+  * free'd by the caller.  Returns 0 on success, in which case all
+  * fields of '*s' will be set; or -1 on parse error, in which case
+  * '*s' is unmodified. */
+-int ne_parse_statusline(const char *status_line, ne_status *s);
++NEON_API(int) ne_parse_statusline(const char *status_line, ne_status *s);
+ 
+ NE_END_DECLS
+ 
+diff -r -u neon-0.30.2/src/ne_xml.h neon-0.30.2-p2/src/ne_xml.h
+--- neon-0.30.2/src/ne_xml.h	2007-07-16 17:47:28.000000000 +1000
++++ neon-0.30.2-p2/src/ne_xml.h	2019-01-10 13:44:30.000000000 +1100
+@@ -76,30 +76,30 @@
+ typedef struct ne_xml_parser_s ne_xml_parser;
+ 
+ /* Create an XML parser. */
+-ne_xml_parser *ne_xml_create(void);
++NEON_API(ne_xml_parser *) ne_xml_create(void);
+ 
+ /* Push a new handler on the stack of parser 'p'. 'cdata' and/or
+  * 'endelm' may be NULL; startelm must be non-NULL. */
+-void ne_xml_push_handler(ne_xml_parser *p,
+-                         ne_xml_startelm_cb *startelm, 
+-                         ne_xml_cdata_cb *cdata,
+-                         ne_xml_endelm_cb *endelm,
+-                         void *userdata);
++NEON_API(void) ne_xml_push_handler(ne_xml_parser *p,
++                                   ne_xml_startelm_cb *startelm, 
++                                   ne_xml_cdata_cb *cdata,
++                                   ne_xml_endelm_cb *endelm,
++                                   void *userdata);
+ 
+ /* ne_xml_failed returns non-zero if there was an error during
+  * parsing, or zero if the parse completed successfully.  The return
+  * value is equal to that of the last ne_xml_parse() call for this
+  * parser object. */
+-int ne_xml_failed(ne_xml_parser *p);
++NEON_API(int) ne_xml_failed(ne_xml_parser *p);
+ 
+ /* Set error string for parser.  (The string may be truncated
+  * internally). */
+-void ne_xml_set_error(ne_xml_parser *p, const char *msg);
++NEON_API(void) ne_xml_set_error(ne_xml_parser *p, const char *msg);
+ 
+ /* Return the error string (and never NULL).  After ne_xml_failed
+  * returns >0, this will describe the parse error.  Otherwise it will
+  * be a default error string. */
+-const char *ne_xml_get_error(ne_xml_parser *p);
++NEON_API(const char *) ne_xml_get_error(ne_xml_parser *p);
+ 
+ /* Parse the given block of input of length len.  Parser must be
+  * called with len=0 to signify the end of the document (for that
+@@ -107,23 +107,23 @@
+  * non-zero on error: for an XML syntax error, a positive number is
+  * returned; if parsing is aborted by a caller-supplied callback, that
+  * callback's return value is returned. */
+-int ne_xml_parse(ne_xml_parser *p, const char *block, size_t len);
++NEON_API(int) ne_xml_parse(ne_xml_parser *p, const char *block, size_t len);
+ 
+ /* As ne_xml_parse, casting (ne_xml_parser *)userdata internally.
+  * (This function can be passed to ne_add_response_body_reader) */
+-int ne_xml_parse_v(void *userdata, const char *block, size_t len);
++NEON_API(int) ne_xml_parse_v(void *userdata, const char *block, size_t len);
+ 
+ /* Return current line of document during parsing or after parsing is
+  * complete. */
+-int ne_xml_currentline(ne_xml_parser *p);
++NEON_API(int) ne_xml_currentline(ne_xml_parser *p);
+ 
+ /* From a start_element callback which was passed 'attrs' using given
+  * parser, return attribute of given name and namespace.  If nspace is
+  * NULL, no namespace resolution is performed.  Note that this call is
+  * context-specific; if called outside a start_element callback,
+  * behaviour is undefined. */
+-const char *ne_xml_get_attr(ne_xml_parser *parser,
+-			    const char **attrs, const char *nspace, 
++NEON_API(const char *) ne_xml_get_attr(ne_xml_parser *parser,
++			               const char **attrs, const char *nspace, 
+ 			    const char *name);
+ 
+ /* From a start_element callback, resolve a given XML Namespace
+@@ -133,16 +133,16 @@
+  * prefix, returns the default namespace URI or the empty string if
+  * none is defined.  Note that this call is context-specific; if
+  * called outside a start_element callback, behaviour is undefined. */
+-const char *ne_xml_resolve_nspace(ne_xml_parser *parser, 
+-                                  const char *prefix, size_t length);
++NEON_API(const char *) ne_xml_resolve_nspace(ne_xml_parser *parser, 
++                                             const char *prefix, size_t length);
+ 
+ /* Return the encoding of the document being parsed.  May return NULL
+  * if no encoding is defined or if the XML declaration has not yet
+  * been parsed. */
+-const char *ne_xml_doc_encoding(const ne_xml_parser *p);
++NEON_API(const char *) ne_xml_doc_encoding(const ne_xml_parser *p);
+ 
+ /* Destroy the parser object. */
+-void ne_xml_destroy(ne_xml_parser *p);
++NEON_API(void) ne_xml_destroy(ne_xml_parser *p);
+ 
+ /* A utility interface for mapping {nspace, name} onto an integer. */
+ struct ne_xml_idmap {
+@@ -154,8 +154,8 @@
+ #define NE_XML_MAPLEN(map) (sizeof(map) / sizeof(struct ne_xml_idmap))
+ 
+ /* Return the 'id' corresponding to {nspace, name}, or zero. */
+-int ne_xml_mapid(const struct ne_xml_idmap map[], size_t maplen,
+-                 const char *nspace, const char *name);
++NEON_API(int) ne_xml_mapid(const struct ne_xml_idmap map[], size_t maplen,
++                           const char *nspace, const char *name);
+ 
+ /* media type, appropriate for adding to a Content-Type header */
+ #define NE_XML_MEDIA_TYPE "application/xml"
+diff -r -u neon-0.30.2/src/ne_xmlreq.h neon-0.30.2-p2/src/ne_xmlreq.h
+--- neon-0.30.2/src/ne_xmlreq.h	2006-09-26 19:35:46.000000000 +1000
++++ neon-0.30.2-p2/src/ne_xmlreq.h	2019-01-10 13:44:30.000000000 +1100
+@@ -33,7 +33,7 @@
+  * error codes.  If an XML parse error occurs, the session error
+  * string is set to the XML parser's error string, and NE_ERROR is
+  * returned. */
+-int ne_xml_parse_response(ne_request *req, ne_xml_parser *parser);
++NEON_API(int) ne_xml_parse_response(ne_request *req, ne_xml_parser *parser);
+ 
+ /* Dispatch the HTTP request, parsing the response body as an XML
+  * document using the given parser, if the response status class is
+@@ -44,7 +44,7 @@
+  * Returns NE_* error codes.  If an XML parse error occurs, the
+  * session error string is set to the XML parser's error string, and
+  * NE_ERROR is returned. */
+-int ne_xml_dispatch_request(ne_request *req, ne_xml_parser *parser);
++NEON_API(int) ne_xml_dispatch_request(ne_request *req, ne_xml_parser *parser);
+ 
+ NE_END_DECLS
+ 
