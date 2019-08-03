@@ -64,7 +64,11 @@
 
 #else /* !NE_LFS */
 
+#if defined(_MSC_VER) && _MSC_VER >= 1400
+#define ne_lseek _lseek
+#else
 #define ne_lseek lseek
+#endif
 #define FMT_NE_OFF_T NE_FMT_OFF_T
 
 #if defined(SIZEOF_LONG_LONG) && defined(LONG_LONG_MAX) \

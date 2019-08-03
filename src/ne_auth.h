@@ -53,8 +53,8 @@ typedef int (*ne_auth_creds)(void *userdata, const char *realm, int attempt,
 /* Set callbacks to provide credentials for server and proxy
  * authentication, using the default set of authentication protocols.
  * userdata is passed as the first argument to the callback. */
-void ne_set_server_auth(ne_session *sess, ne_auth_creds creds, void *userdata);
-void ne_set_proxy_auth(ne_session *sess, ne_auth_creds creds, void *userdata);
+NEON_API(void) ne_set_server_auth(ne_session *sess, ne_auth_creds creds, void *userdata);
+NEON_API(void) ne_set_proxy_auth(ne_session *sess, ne_auth_creds creds, void *userdata);
 
 /* As an alternative to using ne_set_server_auth and
  * ne_set_proxy_auth, the following interfaces may be used; these
@@ -129,14 +129,14 @@ void ne_set_proxy_auth(ne_session *sess, ne_auth_creds creds, void *userdata);
  * ne_add_proxy_auth are used for a given session, the caller must
  * ensure that the order in which those calls are made reflects the
  * precedence of protocols to be used. */
-void ne_add_server_auth(ne_session *sess, unsigned protocol, 
-                        ne_auth_creds creds, void *userdata);
-void ne_add_proxy_auth(ne_session *sess, unsigned protocol, 
-                       ne_auth_creds creds, void *userdata);
+NEON_API(void) ne_add_server_auth(ne_session *sess, unsigned protocol, 
+                                  ne_auth_creds creds, void *userdata);
+NEON_API(void) ne_add_proxy_auth(ne_session *sess, unsigned protocol, 
+                                 ne_auth_creds creds, void *userdata);
 
 /* Clear any cached authentication credentials for the given
  * session. */
-void ne_forget_auth(ne_session *sess);
+NEON_API(void) ne_forget_auth(ne_session *sess);
 
 NE_END_DECLS
 

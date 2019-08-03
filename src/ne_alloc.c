@@ -33,7 +33,7 @@
 
 #include "ne_alloc.h"
 
-static ne_oom_callback_fn oom;
+static ne_oom_callback_fn oom = NULL;
 
 void ne_oom_callback(ne_oom_callback_fn callback)
 {
@@ -42,13 +42,13 @@ void ne_oom_callback(ne_oom_callback_fn callback)
 
 #ifndef NEON_MEMLEAK
 
-#define DO_MALLOC(ptr, len) do {		\
-    ptr = malloc((len));			\
-    if (!ptr) {					\
-	if (oom != NULL)			\
-	    oom();				\
-	abort();				\
-    }						\
+#define DO_MALLOC(ptr, len) do {                \
+    ptr = malloc((len));                        \
+    if (!ptr) {                                 \
+        if (oom != NULL)                        \
+            oom();                              \
+        abort();                                \
+    }                                           \
 } while(0);
 
 void *ne_malloc(size_t len) 
@@ -69,9 +69,9 @@ void *ne_realloc(void *ptr, size_t len)
 {
     void *ret = realloc(ptr, len);
     if (!ret) {
-	if (oom)
-	    oom();
-	abort();
+        if (oom)
+            oom();
+        abort();
     }
     return ret;
 }
@@ -134,8 +134,8 @@ static void *tracking_malloc(size_t len, const char *file, int line)
     struct block *block;
 
     if (!ptr) {
-	if (oom) oom();
-	abort();
+        if (oom) oom();
+        abort();
     }
     
     block = malloc(sizeof *block);

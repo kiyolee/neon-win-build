@@ -37,11 +37,11 @@ typedef struct ne_decompress_s ne_decompress;
  * ne_decompress_destroy after the request has been dispatched, to
  * free any internal state.  If an error occurs during decompression,
  * the request will be aborted and session error string set. */
-ne_decompress *ne_decompress_reader(ne_request *req, ne_accept_response accpt,
-				    ne_block_reader rdr, void *userdata);
+NEON_API(ne_decompress *) ne_decompress_reader(ne_request *req, ne_accept_response accpt,
+				               ne_block_reader rdr, void *userdata);
 
 /* Destroys decompression state. */
-void ne_decompress_destroy(ne_decompress *ctx);
+NEON_API(void) ne_decompress_destroy(ne_decompress *ctx);
 
 NE_END_DECLS
 

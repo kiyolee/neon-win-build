@@ -18,8 +18,8 @@ LIBNEON=lxneon
 !IF "$(DEBUG_BUILD)" == ""
 INTDIR = Release
 !IF "$(BUILD_DLL)" == ""
-TARGET = .\$(LIBNEON)-static.lib
-CFLAGS_RT = /MD /Zl
+TARGET = .\$(LIBNEON)-static-MT.lib
+CFLAGS_RT = /MT /Zl
 CFLAGS_DBG =
 !ELSE
 TARGET = .\$(LIBNEON).dll
@@ -30,8 +30,8 @@ CFLAGS = $(CFLAGS_RT) $(CFLAGS_DBG) /W3 /GF /EHsc /O2 /D "NDEBUG" /D_CRT_SECURE_
 !ELSE
 INTDIR = Debug
 !IF "$(BUILD_DLL)" == ""
-TARGET = .\$(LIBNEON)-static.lib
-CFLAGS_RT = /MDd /Zl
+TARGET = .\$(LIBNEON)-static-MT.lib
+CFLAGS_RT = /MTd /Zl
 CFLAGS_DBG =
 !ELSE
 TARGET = .\$(LIBNEON).dll
@@ -181,11 +181,11 @@ LIB32_OBJS = $(LIB32_OBJS) "$(INTDIR)\ne_openssl.obj"
 !IF "$(BUILD_DLL)" != ""
 !IFDEF OPENSSL_STATIC
 !IF "$(OPENSSL_64BIT)" != ""
-LIB32_OBJS = $(LIB32_OBJS) "$(OPENSSL_SRC)\lib\libcrypto-1_1-static.lib" \
-			   "$(OPENSSL_SRC)\lib\libssl-1_1-static.lib"
+LIB32_OBJS = $(LIB32_OBJS) "$(OPENSSL_SRC)\lib\libcrypto-1_1-static-MT.lib" \
+			   "$(OPENSSL_SRC)\lib\libssl-1_1-static-MT.lib"
 !ELSE
-LIB32_OBJS = $(LIB32_OBJS) "$(OPENSSL_SRC)\lib\libcrypto-1_1-static.lib" \
-			   "$(OPENSSL_SRC)\lib\libssl-1_1-static.lib"
+LIB32_OBJS = $(LIB32_OBJS) "$(OPENSSL_SRC)\lib\libcrypto-1_1-static-MT.lib" \
+			   "$(OPENSSL_SRC)\lib\libssl-1_1-static-MT.lib"
 !ENDIF
 !ELSE
 !IF "$(OPENSSL_64BIT)" != ""

@@ -21,6 +21,16 @@
 
 #include "config.h"
 
+#ifdef WIN32
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#include <windows.h>
+#endif
+
 #include <sys/types.h>
 
 #ifdef HAVE_STRING_H
@@ -70,6 +80,10 @@ typedef const unsigned char ne_d2i_uchar;
 #define X509_up_ref(x) x->references++
 #define EVP_PKEY_up_ref(x) x->references++
 #define EVP_PKEY_get0_RSA(evp) (evp->pkey.rsa)
+#endif
+
+#if OPENSSL_VERSION_NUMBER >= 0x10100000L && defined(_MSC_VER)
+#pragma comment(lib, "crypt32.lib")
 #endif
 
 struct ne_ssl_dname_s {
@@ -1139,11 +1153,11 @@ int ne_ssl_cert_digest(const ne_ssl_certificate *cert, char *digest)
  * point.  */
 
 #ifndef _WIN32
-static pthread_mutex_t *locks;
+static pthread_mutex_t *locks = NULL;
 #else
-static HANDLE *locks;
+static HANDLE *locks = NULL;
 #endif
-static size_t num_locks;
+static size_t num_locks = 0;
 
 #ifndef HAVE_CRYPTO_SET_IDPTR_CALLBACK
 /* Named to be obvious when it shows up in a backtrace. */

@@ -68,27 +68,27 @@ typedef struct ne_207_parser_s ne_207_parser;
 /* Create 207 parser an add the handlers the the given parser's
  * handler stack.  URI references in the 207 response will be resolved
  * relative to the base URI 'base'. */
-ne_207_parser *ne_207_create(ne_xml_parser *parser, const ne_uri *base, 
-                             void *userdata);
+NEON_API(ne_207_parser *) ne_207_create(ne_xml_parser *parser, const ne_uri *base, 
+                                        void *userdata);
 
 /* Register response handling callbacks. */
-void ne_207_set_response_handlers(ne_207_parser *p,
-                                  ne_207_start_response *start,
-                                  ne_207_end_response *end);
+NEON_API(void) ne_207_set_response_handlers(ne_207_parser *p,
+                                            ne_207_start_response *start,
+                                            ne_207_end_response *end);
 
 /* Register propstat handling callbacks. */
-void ne_207_set_propstat_handlers(ne_207_parser *p, 
-                                  ne_207_start_propstat *start,
-                                  ne_207_end_propstat *end);
+NEON_API(void) ne_207_set_propstat_handlers(ne_207_parser *p, 
+                                            ne_207_start_propstat *start,
+                                            ne_207_end_propstat *end);
 
 /* Destroy the parser */
-void ne_207_destroy(ne_207_parser *p);
+NEON_API(void) ne_207_destroy(ne_207_parser *p);
 
 /* An acceptance function which only accepts 207 responses */
-int ne_accept_207(void *userdata, ne_request *req, const ne_status *status);
+NEON_API(int) ne_accept_207(void *userdata, ne_request *req, const ne_status *status);
 
-void *ne_207_get_current_propstat(ne_207_parser *p);
-void *ne_207_get_current_response(ne_207_parser *p);
+NEON_API(void *) ne_207_get_current_propstat(ne_207_parser *p);
+NEON_API(void *) ne_207_get_current_response(ne_207_parser *p);
 
 /* Dispatch request 'req', returning:
  *  NE_ERROR: for a dispatch error, or a non-2xx response, or a
@@ -96,7 +96,7 @@ void *ne_207_get_current_response(ne_207_parser *p);
  *  NE_OK: for a 2xx response or a 207 response which contained
  *            only 2xx-class propstats.
  * The request object is destroyed in both cases. */
-int ne_simple_request(ne_session *sess, ne_request *req);
+NEON_API(int) ne_simple_request(ne_session *sess, ne_request *req);
 
 NE_END_DECLS
 

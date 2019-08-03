@@ -52,8 +52,8 @@ typedef struct
 } ne_acl_entry;
 
 /* Set the ACL for the given resource to the list of ACL entries. */
-int ne_acl_set(ne_session *sess, const char *uri,
-	       const ne_acl_entry entries[], int numentries);
+NEON_API(int) ne_acl_set(ne_session *sess, const char *uri,
+	                 const ne_acl_entry entries[], int numentries);
 
 NE_END_DECLS
 

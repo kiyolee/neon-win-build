@@ -19,6 +19,9 @@
 
 */
 
+#ifndef NE_DEFS_H
+#define NE_DEFS_H
+
 #undef NE_BEGIN_DECLS
 #undef NE_END_DECLS
 #ifdef __cplusplus
@@ -29,9 +32,6 @@
 # define NE_END_DECLS /* empty */
 #endif
 
-#ifndef NE_DEFS_H
-#define NE_DEFS_H
-
 #include <sys/types.h>
 
 #ifdef NE_LFS
@@ -41,6 +41,17 @@ typedef __int64 off64_t;
 typedef off64_t ne_off_t;
 #else
 typedef off_t ne_off_t;
+#endif
+
+#if defined(WIN32) && defined(NEON_DLL)
+#define NEON_LINKAGE __declspec(dllexport)
+#define NEON_API(rettype) NEON_LINKAGE rettype _cdecl
+#elif defined(WIN32) && defined(NEON_IMPORT)
+#define NEON_LINKAGE __declspec(dllimport)
+#define NEON_API(rettype) NEON_LINKAGE rettype _cdecl
+#else
+#define NEON_LINKAGE /* empty */
+#define NEON_API(rettype) rettype
 #endif
 
 /* define ssize_t for Win32 */

@@ -30,11 +30,11 @@ NE_BEGIN_DECLS
 
 /* Perform a GET request on resource at 'path', writing the entity
  * body which is returned to 'fd'. */
-int ne_get(ne_session *sess, const char *path, int fd);
+NEON_API(int) ne_get(ne_session *sess, const char *path, int fd);
 
 /* Perform a PUT request on resource at 'path', reading the entity
  * body to submit from 'fd'. */
-int ne_put(ne_session *sess, const char *path, int fd);
+NEON_API(int) ne_put(ne_session *sess, const char *path, int fd);
 
 #define NE_DEPTH_ZERO (0)
 #define NE_DEPTH_ONE (1)
@@ -52,29 +52,29 @@ int ne_put(ne_session *sess, const char *path, int fd);
  * collection and its properties are to be copied, or
  * NE_DEPTH_INFINITE to request that the collection and its contents
  * are to be copied.  Returns NE_* error code. */
-int ne_copy(ne_session *sess, int overwrite, int depth,
-	    const char *src, const char *dest);
+NEON_API(int) ne_copy(ne_session *sess, int overwrite, int depth,
+	              const char *src, const char *dest);
 
 /* Move resource from 'src' to 'dest' path.  Returns NE_* error
  * code. */
-int ne_move(ne_session *sess, int overwrite,
-	    const char *src, const char *dest);
+NEON_API(int) ne_move(ne_session *sess, int overwrite,
+	              const char *src, const char *dest);
 
 /* Delete resource at 'path'.  Returns NE_* error code. */
-int ne_delete(ne_session *sess, const char *path);
+NEON_API(int) ne_delete(ne_session *sess, const char *path);
 
 /* Create a collection at 'path', which is required to have a trailing
  * slash.  Returns NE_* error code. */
-int ne_mkcol(ne_session *sess, const char *path);
+NEON_API(int) ne_mkcol(ne_session *sess, const char *path);
 
 /* Adds a Depth: header to a request. */
-void ne_add_depth_header(ne_request *req, int depth);
+NEON_API(void) ne_add_depth_header(ne_request *req, int depth);
 
 /* Retrieve modification time of resource at location 'path', using
  * the HEAD method, placing parsed time in *modtime.  *modtime is set
  * to -1 if no Last-Modified response header was given, or the date
  * given could not be parsed.  Returns NE_* error code.  */
-int ne_getmodtime(ne_session *sess, const char *path, time_t *modtime);
+NEON_API(int) ne_getmodtime(ne_session *sess, const char *path, time_t *modtime);
 
 typedef struct {
     const char *type, *subtype;
@@ -86,7 +86,7 @@ typedef struct {
  * had valid content-type, in which case all fields in *ctype are set
  * (and never NULL); the caller must free(ctype->value) after use.
  * Returns non-zero on error, in which case *ctype is not altered. */
-int ne_get_content_type(ne_request *req, ne_content_type *ctype);
+NEON_API(int) ne_get_content_type(ne_request *req, ne_content_type *ctype);
 
 /* DEPRECATED: Server capabilities. */
 typedef struct {
@@ -98,8 +98,8 @@ typedef struct {
 
 /* DEPRECATED: Determines server capabilities (using OPTIONS).  Use
  * ne_options2() instead. */
-int ne_options(ne_session *sess, const char *path,
-               ne_server_capabilities *caps);
+NEON_API(int) ne_options(ne_session *sess, const char *path,
+                         ne_server_capabilities *caps);
 
 #define NE_CAP_DAV_CLASS1    (0x0001) /* Class 1 WebDAV (RFC 2518) */
 #define NE_CAP_DAV_CLASS2    (0x0002) /* Class 2 WebDAV (RFC 2518) */
@@ -122,7 +122,7 @@ int ne_options(ne_session *sess, const char *path,
 /* Determines resource capailities, using an OPTIONS request.  On
  * return, *caps is set to a bit-mask of the above NE_CAP_* constants
  * describing the advertised resource capabilities. */
-int ne_options2(ne_session *sess, const char *path, unsigned int *caps);
+NEON_API(int) ne_options2(ne_session *sess, const char *path, unsigned int *caps);
 
 /* Defines a range of bytes, starting at 'start' and ending
  * at 'end'.  'total' is the number of bytes in the range.
@@ -145,11 +145,11 @@ typedef struct {
  *      range.end = range.start + 999;  (= 1000 bytes)
  *      fseek(myfile, resume_from, SEEK_SET);
  *      ne_get_range(sess, path, &range, myfile); */
-int ne_get_range(ne_session *sess, const char *path, 
-		 ne_content_range *range, int fd);
+NEON_API(int) ne_get_range(ne_session *sess, const char *path, 
+		           ne_content_range *range, int fd);
 
 /* Post using buffer as request-body: stream response into f */
-int ne_post(ne_session *sess, const char *path, int fd, const char *buffer);
+NEON_API(int) ne_post(ne_session *sess, const char *path, int fd, const char *buffer);
 
 NE_END_DECLS
 

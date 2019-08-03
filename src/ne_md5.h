@@ -28,6 +28,8 @@
 
 NE_BEGIN_DECLS
 
+#include "ne_defs.h"
+
 /*
  * The following three functions are build up the low level used in
  * the functions `md5_stream' and `md5_buffer'.
@@ -35,21 +37,21 @@ NE_BEGIN_DECLS
 struct ne_md5_ctx;
 
 /* Create structure containing state of computation. */
-extern struct ne_md5_ctx *ne_md5_create_ctx(void);
+extern NEON_API(struct ne_md5_ctx *) ne_md5_create_ctx(void);
 
 /* Starting with the result of former calls of this function (or the
    initialization function update the context for the next LEN bytes
    starting at BUFFER.
    It is necessary that LEN is a multiple of 64!!! */
-extern void ne_md5_process_block(const void *buffer, size_t len,
-                                 struct ne_md5_ctx *ctx);
+extern NEON_API(void) ne_md5_process_block(const void *buffer, size_t len,
+                                           struct ne_md5_ctx *ctx);
 
 /* Starting with the result of former calls of this function (or the
    initialization function update the context for the next LEN bytes
    starting at BUFFER.
    It is NOT required that LEN is a multiple of 64.  */
-extern void ne_md5_process_bytes(const void *buffer, size_t len,
-                                 struct ne_md5_ctx *ctx);
+extern NEON_API(void) ne_md5_process_bytes(const void *buffer, size_t len,
+                                           struct ne_md5_ctx *ctx);
 
 /* Process the remaining bytes in the buffer and put result from CTX
    in first 16 bytes following RESBUF.  The result is always in little
@@ -58,7 +60,7 @@ extern void ne_md5_process_bytes(const void *buffer, size_t len,
 
    IMPORTANT: On some systems it is required that RESBUF is correctly
    aligned for a 32 bits value.  */
-extern void *ne_md5_finish_ctx(struct ne_md5_ctx *ctx, void *resbuf);
+extern NEON_API(void *) ne_md5_finish_ctx(struct ne_md5_ctx *ctx, void *resbuf);
 
 
 /* Put result from CTX in first 16 bytes following RESBUF.  The result is
@@ -67,31 +69,31 @@ extern void *ne_md5_finish_ctx(struct ne_md5_ctx *ctx, void *resbuf);
 
    IMPORTANT: On some systems it is required that RESBUF is correctly
    aligned for a 32 bits value.  */
-extern void *ne_md5_read_ctx(const struct ne_md5_ctx *ctx, void *resbuf);
+extern NEON_API(void *) ne_md5_read_ctx(const struct ne_md5_ctx *ctx, void *resbuf);
 
 /* Take a copy of the state structure. */
-extern struct ne_md5_ctx *ne_md5_dup_ctx(struct ne_md5_ctx *ctx);
+extern NEON_API(struct ne_md5_ctx *) ne_md5_dup_ctx(struct ne_md5_ctx *ctx);
 
 /* Re-initialize the context structure. */
-extern void ne_md5_reset_ctx(struct ne_md5_ctx *ctx);
+extern NEON_API(void) ne_md5_reset_ctx(struct ne_md5_ctx *ctx);
 
 /* Destroy the context structure. */
-extern void ne_md5_destroy_ctx(struct ne_md5_ctx *ctx);
+extern NEON_API(void) ne_md5_destroy_ctx(struct ne_md5_ctx *ctx);
 
 /* Compute MD5 message digest for bytes read from STREAM.  The
    resulting message digest number will be written into the 16 bytes
    beginning at RESBLOCK.  */
-extern int ne_md5_stream(FILE *stream, void *resblock);
+extern NEON_API(int) ne_md5_stream(FILE *stream, void *resblock);
 
 /* Process the remaining bytes in the buffer and put ASCII
    representation of the resulting message digest from CTX in the
    first 33 bytes of BUFFER, including a trailing NUL terminator
    byte.  Returns pointer to buffer. */
-char *ne_md5_finish_ascii(struct ne_md5_ctx *ctx, char buffer[33]);
+NEON_API(char *) ne_md5_finish_ascii(struct ne_md5_ctx *ctx, char buffer[33]);
 
 /* MD5 ascii->binary conversion */
-void ne_md5_to_ascii(const unsigned char md5_buf[16], char *buffer);
-void ne_ascii_to_md5(const char *buffer, unsigned char md5_buf[16]);
+NEON_API(void) ne_md5_to_ascii(const unsigned char md5_buf[16], char *buffer);
+NEON_API(void) ne_ascii_to_md5(const char *buffer, unsigned char md5_buf[16]);
 
 NE_END_DECLS
 

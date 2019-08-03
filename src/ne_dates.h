@@ -31,23 +31,23 @@ NE_BEGIN_DECLS
 /* Date manipulation routines as per RFC1123 and RFC1036 */
 
 /* Return current date/time in RFC1123 format */
-char *ne_rfc1123_date(time_t anytime);
+NEON_API(char *) ne_rfc1123_date(time_t anytime);
 
 /* Returns time from date/time using the subset of the ISO8601 format
  * referenced in RFC2518 (e.g as used in the creationdate property in
  * the DAV: namespace). */
-time_t ne_iso8601_parse(const char *date);
+NEON_API(time_t) ne_iso8601_parse(const char *date);
 
 /* Returns time from date/time in RFC1123 format */
-time_t ne_rfc1123_parse(const char *date);
+NEON_API(time_t) ne_rfc1123_parse(const char *date);
 
-time_t ne_rfc1036_parse(const char *date);
+NEON_API(time_t) ne_rfc1036_parse(const char *date);
 
 /* Parses asctime date string */
-time_t ne_asctime_parse(const char *date);
+NEON_API(time_t) ne_asctime_parse(const char *date);
 
 /* Parse an HTTP-date as per RFC2616 */
-time_t ne_httpdate_parse(const char *date);
+NEON_API(time_t) ne_httpdate_parse(const char *date);
 
 NE_END_DECLS
 

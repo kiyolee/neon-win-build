@@ -35,7 +35,7 @@ NE_BEGIN_DECLS
 typedef void (*ne_oom_callback_fn)(void);
 
 /* Set callback which is called if malloc() returns NULL. */
-void ne_oom_callback(ne_oom_callback_fn callback);
+NEON_API(void) ne_oom_callback(ne_oom_callback_fn callback);
 
 #ifndef NEON_MEMLEAK
 /* Replacements for standard C library memory allocation functions,
@@ -43,13 +43,13 @@ void ne_oom_callback(ne_oom_callback_fn callback);
  * neon will abort(); calling an OOM callback beforehand if one is
  * registered.  The C library will only ever return NULL if the
  * operating system does not use optimistic memory allocation. */
-void *ne_malloc(size_t size) ne_attribute_malloc;
-void *ne_calloc(size_t size) ne_attribute_malloc;
-void *ne_realloc(void *ptr, size_t s);
-char *ne_strdup(const char *s) ne_attribute_malloc;
-char *ne_strndup(const char *s, size_t n) ne_attribute_malloc;
+NEON_API(void *) ne_malloc(size_t size) ne_attribute_malloc;
+NEON_API(void *) ne_calloc(size_t size) ne_attribute_malloc;
+NEON_API(void *) ne_realloc(void *ptr, size_t s);
+NEON_API(char *) ne_strdup(const char *s) ne_attribute_malloc;
+NEON_API(char *) ne_strndup(const char *s, size_t n) ne_attribute_malloc;
 #ifdef WIN32
-void ne_free(void *ptr);
+NEON_API(void) ne_free(void *ptr);
 #else
 #define ne_free free
 #endif

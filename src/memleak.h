@@ -31,6 +31,8 @@
 
 #include <stdio.h>
 
+#include "ne_defs.h"
+
 #define ne_malloc(s) ne_malloc_ml(s, __FILE__, __LINE__)
 #define ne_calloc(s) ne_calloc_ml(s, __FILE__, __LINE__)
 #define ne_realloc(p, s) ne_realloc_ml(p, s, __FILE__, __LINE__)
@@ -39,17 +41,17 @@
 #define ne_free ne_free_ml
 
 /* Prototypes of allocation functions: */
-void *ne_malloc_ml(size_t size, const char *file, int line);
-void *ne_calloc_ml(size_t size, const char *file, int line);
-void *ne_realloc_ml(void *ptr, size_t s, const char *file, int line);
-char *ne_strdup_ml(const char *s, const char *file, int line);
-char *ne_strndup_ml(const char *s, size_t n, const char *file, int line);
-void ne_free_ml(void *ptr);
+NEON_API(void *) ne_malloc_ml(size_t size, const char *file, int line);
+NEON_API(void *) ne_calloc_ml(size_t size, const char *file, int line);
+NEON_API(void *) ne_realloc_ml(void *ptr, size_t s, const char *file, int line);
+NEON_API(char *) ne_strdup_ml(const char *s, const char *file, int line);
+NEON_API(char *) ne_strndup_ml(const char *s, size_t n, const char *file, int line);
+NEON_API(void) ne_free_ml(void *ptr);
 
 /* Dump the list of currently allocated blocks to 'f'. */
-void ne_alloc_dump(FILE *f);
+NEON_API(void) ne_alloc_dump(FILE *f);
 
 /* Current number of bytes in allocated but not free'd. */
-extern size_t ne_alloc_used;
+extern NEON_LINKAGE size_t ne_alloc_used;
 
 #endif /* MEMLEAK_H */

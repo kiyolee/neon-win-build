@@ -107,6 +107,14 @@
 #include <gnutls/gnutls.h>
 #endif
 
+#ifdef _MSC_VER
+#pragma comment(lib, "ws2_32.lib")
+#endif
+
+#ifndef _WINSOCK2API_
+typedef int SOCKET;
+#endif
+
 #define NE_INET_ADDR_DEFINED
 /* A slightly ugly hack: change the ne_inet_addr definition to be the
  * real address type used.  The API only exposes ne_inet_addr as a
@@ -408,11 +416,11 @@ static int raw_poll(int fdno, int rdwr, int secs)
      * correctly on Netware if not inside a compound statement
      * block. */
     if (rdwr == 0) {
-        FD_SET(fdno, &rdfds);
+        FD_SET((SOCKET)fdno, &rdfds);
     } else {
-        FD_SET(fdno, &wrfds);
+        FD_SET((SOCKET)fdno, &wrfds);
     }
-    FD_SET(fdno, &exfds);
+    FD_SET((SOCKET)fdno, &exfds);
 
     if (tvp) {
         tvp->tv_sec = secs;
@@ -1351,7 +1359,7 @@ static int do_bind(int fd, int peer_family,
     {
         int flag = 1;
 
-        (void) setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &flag, sizeof flag);
+        (void) setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, (const char *) &flag, sizeof flag);
         /* An error here is not fatal, so ignore it. */
     }
 #endif        
@@ -1470,7 +1478,7 @@ int ne_sock_connect(ne_socket *sock,
 #if defined(HAVE_SETSOCKOPT) && (defined(TCP_NODELAY) || defined(WIN32))
     { /* Disable the Nagle algorithm. */
         int flag = 1;
-        setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, &flag, sizeof flag);
+        setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, (const char *) &flag, sizeof flag);
     }
 #endif
     

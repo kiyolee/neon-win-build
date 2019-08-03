@@ -66,6 +66,10 @@ struct body_reader {
     struct body_reader *next;
 };
 
+#if defined(_MSC_VER) && _MSC_VER >= 1400
+#define write _write
+#endif
+
 struct field {
     char *name, *value;
     size_t vlen;

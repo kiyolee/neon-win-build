@@ -37,7 +37,7 @@
 #define HAVE_MEMCPY
 #define HAVE_SETSOCKOPT
 
-#define HAVE_SSPI
+/* #define HAVE_SSPI */
 
 #define NE_HAVE_TS_SSL 1
 
