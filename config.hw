@@ -39,6 +39,8 @@
 
 /* #define HAVE_SSPI */
 
+#define NE_LFS
+
 #define NE_HAVE_TS_SSL 1
 
 /* Define to enable debugging */
@@ -59,11 +61,11 @@
 #define SIZEOF_LONG 4
 
 /* Win32 uses a underscore, so we use a macro to eliminate that. */
-#if (_MSC_VER < 1900)
+#if defined(_MSC_VER) && _MSC_VER < 1900
 #define snprintf			_snprintf
 #endif
 /* VS2008 has this already defined */
-#if (_MSC_VER < 1500)
+#if defined(_MSC_VER) && _MSC_VER < 1500
 #define vsnprintf			_vsnprintf
 #endif
 

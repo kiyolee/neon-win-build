@@ -34,6 +34,10 @@
 
 #include <sys/types.h>
 
+#ifndef NE_LFS
+#define NE_LFS
+#endif
+
 #ifdef NE_LFS
 # ifdef _MSC_VER
 typedef __int64 off64_t;
