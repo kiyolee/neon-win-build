@@ -34,7 +34,7 @@ BOOL WINAPI DllMain(HINSTANCE hInstance, DWORD fdwReason, LPVOID lpvReserved)
         break;
 
     case DLL_THREAD_DETACH:
-#if OPENSSL_VERSION_NUMBER >= 0x10100000L
+#if defined(HAVE_OPENSSL_STATIC) && OPENSSL_VERSION_NUMBER >= 0x10100000L
         OPENSSL_thread_stop();
 #endif
         break;
