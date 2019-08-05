@@ -3,6 +3,7 @@
   <ImportGroup Label="PropertySheets" />
   <PropertyGroup Label="UserMacros">
     <ZLIB_INC_DIR>..\..\..\zlib-win-build\</ZLIB_INC_DIR>
+    <ZLIB_LIB>libz-static.lib</ZLIB_LIB>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Platform)'=='Win32'" Label="UserMacros">
     <ZLIB_LIB_DIR>..\..\..\zlib-win-build\$(BUILD_VSENV)\$(Configuration)\</ZLIB_LIB_DIR>
@@ -17,6 +18,9 @@
     </BuildMacro>
     <BuildMacro Include="ZLIB_LIB_DIR">
       <Value>$(ZLIB_LIB_DIR)</Value>
+    </BuildMacro>
+    <BuildMacro Include="ZLIB_LIB">
+      <Value>$(ZLIB_LIB)</Value>
     </BuildMacro>
   </ItemGroup>
 </Project>

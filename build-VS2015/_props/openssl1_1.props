@@ -3,6 +3,7 @@
   <ImportGroup Label="PropertySheets" />
   <PropertyGroup Label="UserMacros">
     <OPENSSL_INC_DIR>..\..\..\openssl1_1-win-build\include\</OPENSSL_INC_DIR>
+    <OPENSSL_LIBS>libssl-1_1-static.lib;libcrypto-1_1-static.lib</OPENSSL_LIBS>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Platform)'=='Win32'" Label="UserMacros">
     <OPENSSL_LIB_DIR>..\..\..\openssl1_1-win-build\$(BUILD_VSENV)\$(Configuration)\</OPENSSL_LIB_DIR>
@@ -17,6 +18,9 @@
     </BuildMacro>
     <BuildMacro Include="OPENSSL_LIB_DIR">
       <Value>$(OPENSSL_LIB_DIR)</Value>
+    </BuildMacro>
+    <BuildMacro Include="OPENSSL_LIBS">
+      <Value>$(OPENSSL_LIBS)</Value>
     </BuildMacro>
   </ItemGroup>
 </Project>
