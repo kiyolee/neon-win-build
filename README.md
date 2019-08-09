@@ -23,3 +23,5 @@ Basically, in a command prompt:
 > \> git clone https://github.com/kiyolee/neon-win-build.git
 
 Build zlib first and then openssl1_1 and finally neon, with the same corresponding Visual Studio solution of course.
+
+Note: If you prefer to use openssl 1.0 instead, check out branch openssl1_0.
