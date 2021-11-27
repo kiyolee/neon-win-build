@@ -29,6 +29,8 @@
 
 int single_serve_string(ne_socket *s, void *userdata);
 
+int serve_response(ne_socket *s, const char *response);
+
 struct many_serve_args {
     int count;
     const char *str;
@@ -115,6 +117,14 @@ int full_write(ne_socket *sock, const char *data, size_t len);
  * on success.  Uses an unspecified hostname/port for the server. */
 int session_server(ne_session **sess, server_fn fn, void *userdata);
 
+/* Create a session for scheme with server process running count
+ * multiple iterations fn(userdata).  Sets test suite error on
+ * failure; initializes *sess with a new session on success.  Uses an
+ * unspecified hostname/port for the server. */
+int multi_session_server(ne_session **sess, const char *scheme,
+                         const char *hostname,
+                         int count, server_fn fn, void *userdata);
+
 /* Create a session with server process running fn(userdata).  Sets
  * test suite error on failure; initializes *sess with a new session
  * on success.  Uses an unspecified hostname/port for the server;
@@ -129,6 +139,13 @@ int proxied_session_server(ne_session **sess, const char *scheme,
 int fakeproxied_session_server(ne_session **sess, const char *scheme,
                                const char *host, unsigned int fakeport,
                                server_fn fn, void *userdata);
+
+/* As per fakeproxied_session_server, but also takes an iteration
+ * count. */
+int fakeproxied_multi_session_server(int count,
+                                     ne_session **sess, const char *scheme,
+                                     const char *host, unsigned int fakeport,
+                                     server_fn fn, void *userdata);
 
 /* Read contents of file 'filename' into buffer 'buf'. */
 int file_to_buffer(const char *filename, ne_buffer *buf);

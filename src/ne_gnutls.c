@@ -1,6 +1,6 @@
 /*
    neon SSL/TLS support using GNU TLS
-   Copyright (C) 2002-2011, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 2002-2021, Joe Orton <joe@manyfish.co.uk>
    Copyright (C) 2004, Aleix Conchillo Flaque <aleix@member.fsf.org>
 
    This library is free software; you can redistribute it and/or
@@ -33,6 +33,7 @@
 #include <errno.h>
 
 #include <gnutls/gnutls.h>
+#include <gnutls/crypto.h>
 #include <gnutls/pkcs12.h>
 
 #ifdef NE_HAVE_TS_SSL
@@ -660,7 +661,7 @@ static int provide_client_cert(gnutls_session_t session,
                 return ret;
             }
             
-            *pcert = gnutls_malloc(sizeof *pcert);
+            *pcert = gnutls_calloc(1, sizeof **pcert);
             gnutls_pcert_import_x509(*pcert, sess->client_cert->cert.subject, 0);
             *pcert_length = 1;
 #else /* !HAVE_GNUTLS_CERTIFICATE_SET_RETRIEVE_FUNCTION2 */
@@ -967,10 +968,17 @@ static int check_certificate(ne_session *sess, gnutls_session_t sock,
         return NE_ERROR;
     }
 
-    failures |= map_verify_failures(&status);
+    ret = map_verify_failures(&status);
+    /* For CA expiry/not-yet-valid, mask out the failure bits if
+     * they've been caught and treated as chain errors already by check_chain_expiry(). */
+    if ((ret & (NE_SSL_EXPIRED|NE_SSL_NOTYETVALID)) != 0
+        && (failures & NE_SSL_BADCHAIN) == NE_SSL_BADCHAIN) {
+        ret &= ~(NE_SSL_EXPIRED|NE_SSL_NOTYETVALID);
+    }
+    failures |= ret;
 
-    NE_DEBUG(NE_DBG_SSL, "ssl: Verification failures = %d (status = %u).\n", 
-             failures, status);
+    NE_DEBUG(NE_DBG_SSL, "ssl: Verification failures %d => %d (status = %u).\n",
+             ret, failures, status);
     
     if (status && status != GNUTLS_CERT_INVALID) {
         char *errstr = verify_error_string(status);
@@ -1455,6 +1463,41 @@ char *ne_ssl_cert_export(const ne_ssl_certificate *cert)
     return ret;
 }
 
+static gnutls_digest_algorithm_t hash_to_alg(unsigned int flags)
+{
+    switch (flags & NE_HASH_ALGMASK) {
+    case NE_HASH_MD5: return GNUTLS_DIG_MD5; break;
+    case NE_HASH_SHA256: return GNUTLS_DIG_SHA256; break;
+    case NE_HASH_SHA512: return GNUTLS_DIG_SHA512; break;
+    default: break;
+    }
+    return GNUTLS_DIG_UNKNOWN;
+}
+
+char *ne_ssl_cert_hdigest(const ne_ssl_certificate *cert, unsigned int flags)
+{
+    gnutls_digest_algorithm_t alg = hash_to_alg(flags);
+    unsigned char *dig;
+    size_t len;
+    char *rv;
+
+    if (alg == GNUTLS_DIG_UNKNOWN) return NULL;
+
+    if (gnutls_x509_crt_get_fingerprint(cert->subject, alg, NULL, &len) != GNUTLS_E_SHORT_MEMORY_BUFFER) {
+        return NULL;
+    }
+
+    dig = ne_malloc(len);
+    if (gnutls_x509_crt_get_fingerprint(cert->subject, alg, dig, &len) < 0) {
+        ne_free(dig);
+        return NULL;
+    }
+
+    rv = ne__strhash2hex(dig, len, flags);
+    ne_free(dig);
+    return rv;
+}
+
 int ne_ssl_cert_digest(const ne_ssl_certificate *cert, char *digest)
 {
     char sha1[20], *p;
@@ -1497,4 +1540,31 @@ void ne__ssl_exit(void)
      * the process. */
     gnutls_global_deinit();
 #endif
+}
+
+char *ne_vstrhash(unsigned int flags, va_list ap)
+{
+    gnutls_digest_algorithm_t alg = hash_to_alg(flags);
+    gnutls_hash_hd_t hd;
+    unsigned char *out;
+    const char *arg;
+    unsigned len;
+    char *rv;
+
+    if (alg == GNUTLS_DIG_UNKNOWN)
+        return NULL;
+
+    if (gnutls_hash_init(&hd, alg) < 0)
+        return NULL;
+
+    while ((arg = va_arg(ap, const char *)) != NULL)
+        gnutls_hash(hd, arg, strlen(arg));
+
+    len = gnutls_hash_get_len(alg);
+    out = ne_malloc(len);
+    gnutls_hash_deinit(hd, out);
+
+    rv = ne__strhash2hex(out, len, flags);
+    ne_free(out);
+    return rv;
 }

@@ -1,6 +1,6 @@
 /* 
    HTTP utility functions
-   Copyright (C) 1999-2006, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 1999-2021, Joe Orton <joe@manyfish.co.uk>
 
    This library is free software; you can redistribute it and/or
    modify it under the terms of the GNU Library General Public
@@ -40,10 +40,8 @@ NE_BEGIN_DECLS
  *    "neon 0.2.0: Library build, OpenSSL support" */
 NEON_API(const char *) ne_version_string(void);
 
-/* Returns non-zero if library version is not of major version
- * 'major', or if minor version is not greater than or equal to
- * 'minor'.  For neon versions with major == 0, all minor versions are
- * presumed to be incompatible.  */
+/* Returns non-zero if neon library version is backwards-compatible
+ * with ABI at given (major, minor). */
 NEON_API(int) ne_version_match(int major, int minor);
 
 /* Feature codes: */

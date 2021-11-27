@@ -183,7 +183,7 @@ int ne_sspi_deinit(void)
 }
 
 /*
- * Simplification wrapper arround AcquireCredentialsHandle as most of
+ * Simplification wrapper around AcquireCredentialsHandle as most of
  * the parameters do not change.
  */
 static int acquireCredentialsHandle(CredHandle * credentials, char *package)
@@ -206,7 +206,7 @@ static int acquireCredentialsHandle(CredHandle * credentials, char *package)
 }
 
 /*
- * Wrapper arround initializeSecurityContext.  Supplies several
+ * Wrapper around initializeSecurityContext.  Supplies several
  * default parameters as well as logging in case of errors.
  */
 static SECURITY_STATUS
@@ -427,7 +427,7 @@ initSingleEmptyBuffer(SecBufferDesc * bufferDesc, SecBuffer * buffer)
 }
 
 /*
- * Destroyes the supplied context.
+ * Destroys the supplied context.
  */
 int ne_sspi_destroy_context(void *context)
 {

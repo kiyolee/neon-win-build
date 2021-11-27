@@ -1,6 +1,6 @@
 /* 
    HTTP request/response handling
-   Copyright (C) 1999-2010, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 1999-2021, Joe Orton <joe@manyfish.co.uk>
 
    This library is free software; you can redistribute it and/or
    modify it under the terms of the GNU Library General Public
@@ -76,6 +76,8 @@ struct field {
     struct field *next;
 };
 
+/* Maximum number of interim responses. */
+#define MAX_INTERIM_RESPONSES (128)
 /* Maximum number of header fields per response: */
 #define MAX_HEADER_FIELDS (100)
 /* Size of hash table; 43 is the smallest prime for which the common
@@ -91,7 +93,7 @@ struct field {
 #define HH_HV_TRANSFER_ENCODING (0x07)
 
 struct ne_request_s {
-    char *method, *uri; /* method and Request-URI */
+    char *method, *target; /* method and request-target */
 
     ne_buffer *headers; /* request headers */
 
@@ -333,7 +335,7 @@ static ssize_t body_fd_send(void *userdata, char *buffer, size_t count)
                 /* errno was set */
                 ne_strerror(errno, err, sizeof err);
             } else {
-                strcpy(err, _("offset invalid"));
+                ne_strnzcpy(err, _("offset invalid"), sizeof err);
             }
             ne_snprintf(offstr, sizeof offstr, "%" FMT_NE_OFF_T,
                         req->body.file.offset);
@@ -460,14 +462,14 @@ static int send_request_body(ne_request *req, int retry)
     return NE_OK;
 }
 
-/* Lob the User-Agent, connection and host headers in to the request
- * headers */
-static void add_fixed_headers(ne_request *req) 
+/* Set up buffer for initial request headers. */
+static ne_buffer *initial_request_headers(ne_request *req) 
 {
     ne_session *const sess = req->session;
+    ne_buffer *hdrs = ne_buffer_create();
 
     if (sess->user_agent) {
-        ne_buffer_zappend(req->headers, sess->user_agent);
+        ne_buffer_zappend(hdrs, sess->user_agent);
     }
 
     /* If persistent connections are disabled, just send Connection:
@@ -475,25 +477,27 @@ static void add_fixed_headers(ne_request *req)
      * servers to try harder to get a persistent connection, except if
      * using a proxy as per 2068§19.7.1.  Always add TE: trailers. */
     if (!sess->flags[NE_SESSFLAG_PERSIST]) {
-       ne_buffer_czappend(req->headers, "Connection: TE, close" EOL);
+       ne_buffer_czappend(hdrs, "Connection: TE, close" EOL);
     } 
     else if (!sess->is_http11 && !sess->any_proxy_http) {
-        ne_buffer_czappend(req->headers, 
+        ne_buffer_czappend(hdrs, 
                            "Keep-Alive: " EOL
                           "Connection: TE, Keep-Alive" EOL);
     } 
     else if (!req->session->is_http11 && !sess->any_proxy_http) {
-        ne_buffer_czappend(req->headers, 
+        ne_buffer_czappend(hdrs, 
                            "Keep-Alive: " EOL
                            "Proxy-Connection: Keep-Alive" EOL
                            "Connection: TE" EOL);
     } 
     else {
-        ne_buffer_czappend(req->headers, "Connection: TE" EOL);
+        ne_buffer_czappend(hdrs, "Connection: TE" EOL);
     }
 
-    ne_buffer_concat(req->headers, "TE: trailers" EOL "Host: ", 
+    ne_buffer_concat(hdrs, "TE: trailers" EOL "Host: ", 
                      req->session->server.hostport, EOL, NULL);
+
+    return hdrs;
 }
 
 int ne_accept_always(void *userdata, ne_request *req, const ne_status *st)
@@ -512,7 +516,6 @@ ne_request *ne_request_create(ne_session *sess,
     ne_request *req = ne_calloc(sizeof *req);
 
     req->session = sess;
-    req->headers = ne_buffer_create();
     
     /* Presume the method is idempotent by default. */
     req->flags[NE_REQFLAG_IDEMPOTENT] = 1;
@@ -520,7 +523,7 @@ ne_request *ne_request_create(ne_session *sess,
     req->flags[NE_REQFLAG_EXPECT100] = sess->flags[NE_SESSFLAG_EXPECT100];
 
     /* Add in the fixed headers */
-    add_fixed_headers(req);
+    req->headers = initial_request_headers(req);
 
     /* Set the standard stuff */
     req->method = ne_strdup(method);
@@ -529,17 +532,18 @@ ne_request *ne_request_create(ne_session *sess,
     /* Only use an absoluteURI here when we might be using an HTTP
      * proxy, and SSL is in use: some servers can't parse them. */
     if (sess->any_proxy_http && !req->session->use_ssl && path[0] == '/')
-	req->uri = ne_concat(req->session->scheme, "://", 
-                             req->session->server.hostport, path, NULL);
+        req->target = ne_concat(req->session->scheme, "://",
+                                req->session->server.hostport,
+                                path, NULL);
     else
-	req->uri = ne_strdup(path);
+        req->target = ne_strdup(path);
 
     {
 	struct hook *hk;
 
 	for (hk = sess->create_req_hooks; hk != NULL; hk = hk->next) {
 	    ne_create_request_fn fn = (ne_create_request_fn)hk->fn;
-	    fn(req, hk->userdata, req->method, req->uri);
+	    fn(req, hk->userdata, req->method, req->target);
 	}
     }
 
@@ -589,7 +593,7 @@ void ne_set_request_body_fd(ne_request *req, int fd,
 
 void ne_set_request_flag(ne_request *req, ne_request_flag flag, int value)
 {
-    if (flag < (ne_request_flag)NE_SESSFLAG_LAST) {
+    if (flag < (ne_request_flag)NE_REQFLAG_LAST) {
         req->flags[flag] = value;
     }
 }
@@ -727,7 +731,7 @@ void ne_request_destroy(ne_request *req)
     struct body_reader *rdr, *next_rdr;
     struct hook *hk, *next_hk;
 
-    ne_free(req->uri);
+    ne_free(req->target);
     ne_free(req->method);
 
     for (rdr = req->body_readers; rdr != NULL; rdr = next_rdr) {
@@ -762,7 +766,7 @@ void ne_request_destroy(ne_request *req)
 /* Reads a block of the response into BUFFER, which is of size
  * *BUFLEN.  Returns zero on success or non-zero on error.  On
  * success, *BUFLEN is updated to be the number of bytes read into
- * BUFFER (which will be 0 to indicate the end of the repsonse).  On
+ * BUFFER (which will be 0 to indicate the end of the response).  On
  * error, the connection is closed and the session error string is
  * set.  */
 static int read_response_block(ne_request *req, struct ne_response *resp, 
@@ -888,7 +892,8 @@ static ne_buffer *build_request(ne_request *req)
     ne_buffer *buf = ne_buffer_create();
 
     /* Add Request-Line and headers: */
-    ne_buffer_concat(buf, req->method, " ", req->uri, " HTTP/1.1" EOL, NULL);
+    ne_buffer_concat(buf, req->method, " ", req->target, " HTTP/1.1" EOL,
+                     NULL);
 
     /* Add custom headers: */
     ne_buffer_append(buf, req->headers->data, ne_buffer_size(req->headers));
@@ -916,7 +921,7 @@ static void dump_request(const char *request)
 	/* Display everything mode */
 	NE_DEBUG(NE_DBG_HTTP, "Sending request headers:\n%s", request);
     } else if (ne_debug_mask & NE_DBG_HTTP) {
-	/* Blank out the Authorization paramaters */
+	/* Blank out the Authorization parameters */
 	char *reqdebug = ne_strdup(request), *pnt = reqdebug;
 	while ((pnt = strstr(pnt, "Authorization: ")) != NULL) {
 	    for (pnt += 15; *pnt != '\r' && *pnt != '\0'; pnt++) {
@@ -944,6 +949,12 @@ static inline void strip_eol(char *buf, ssize_t *len)
     }
 }
 
+#ifdef NE_HAVE_SSL
+#define SSL_CC_REQUESTED(_r) (_r->session->ssl_cc_requested)
+#else
+#define SSL_CC_REQUESTED(_r) (0)
+#endif
+
 /* Read and parse response status-line into 'status'.  'retry' is non-zero
  * if an NE_RETRY should be returned if an EOF is received. */
 static int read_status_line(ne_request *req, ne_status *status, int retry)
@@ -953,8 +964,11 @@ static int read_status_line(ne_request *req, ne_status *status, int retry)
 
     ret = ne_sock_readline(req->session->socket, buffer, sizeof req->respbuf);
     if (ret <= 0) {
-	int aret = aborted(req, _("Could not read status line"), ret);
-	return RETRY_RET(retry, ret, aret);
+        const char *errstr = SSL_CC_REQUESTED(req)
+            ? _("Could not read status line (TLS client certificate was requested)")
+            : _("Could not read status line");
+        int aret = aborted(req, errstr, ret);
+        return RETRY_RET(retry, ret, aret);
     }
     
     NE_DEBUG(NE_DBG_HTTP, "[status-line] < %s", buffer);
@@ -1007,6 +1021,7 @@ static int send_request(ne_request *req, const ne_buffer *request)
     ne_status *const status = &req->status;
     int sentbody = 0; /* zero until body has been sent. */
     int ret, retry; /* retry non-zero whilst the request should be retried */
+    unsigned count;
     ssize_t sret;
 
     /* Send the Request-Line and headers */
@@ -1035,11 +1050,13 @@ static int send_request(ne_request *req, const ne_buffer *request)
     
     NE_DEBUG(NE_DBG_HTTP, "Request sent; retry is %d.\n", retry);
 
-    /* Loop eating interim 1xx responses (RFC2616 says these MAY be
-     * sent by the server, even if 100-continue is not used). */
-    while ((ret = read_status_line(req, status, retry)) == NE_OK 
-	   && status->klass == 1) {
-	NE_DEBUG(NE_DBG_HTTP, "Interim %d response.\n", status->code);
+    /* Loop eating interim 1xx responses; RFC 7231§6.2 says clients
+     * MUST be able to parse unsolicited interim responses. */
+    for (count = 0; count < MAX_INTERIM_RESPONSES
+             && (ret = read_status_line(req, status, retry)) == NE_OK
+             && status->klass == 1; count++) {
+	NE_DEBUG(NE_DBG_HTTP, "[req] Interim %d response %d.\n",
+                 status->code, count);
 	retry = 0; /* successful read() => never retry now. */
 	/* Discard headers with the interim response. */
 	if ((ret = discard_headers(req)) != NE_OK) break;
@@ -1050,6 +1067,10 @@ static int send_request(ne_request *req, const ne_buffer *request)
 	    if ((ret = send_request_body(req, 0)) != NE_OK) break;	    
 	    sentbody = 1;
 	}
+    }
+
+    if (count == MAX_INTERIM_RESPONSES) {
+        return aborted(req, _("Too many interim responses"), 0);
     }
 
     return ret;
@@ -1106,8 +1127,8 @@ static int read_message_header(ne_request *req, char *buf, size_t buflen)
 	
 	/* assert(buf[0] == ch), which implies len(buf) > 0.
 	 * Otherwise the TCP stack is lying, but we'll be paranoid.
-	 * This might be a \t, so replace it with a space to be
-	 * friendly to applications (2616 says we MAY do this). */
+	 * This might be a \t, so replace it with a space for ease of
+	 * parsing; this is permitted by RFC 7230§3.5. */
 	if (n) buf[0] = ' ';
 
 	/* ready for the next header. */
@@ -1317,23 +1338,22 @@ int ne_begin_request(ne_request *req)
     }
 
     /* Decide which method determines the response message-length per
-     * 2616§4.4 (multipart/byteranges is not supported): */
+     * RFC 7230§3.3.3, method cases follow: */
 
 #ifdef NE_HAVE_SSL
-    /* Special case for CONNECT handling: the response has no body,
-     * and the connection can persist. */
+    /* Case (2) is special-cased first for CONNECT: the response has
+     * no body, and the connection can persist. */
     if (req->session->in_connect && st->klass == 2) {
 	req->resp.mode = R_NO_BODY;
 	req->can_persist = 1;
     } else
 #endif
-    /* HEAD requests and 204, 304 responses have no response body,
-     * regardless of what headers are present. */
+    /* Case (1), HEAD requests and 204, 304 responses have no response
+     * body, regardless of what headers are present. */
     if (req->method_is_head || st->code == 204 || st->code == 304) {
     	req->resp.mode = R_NO_BODY;
     }
-    /* Broken intermediaries exist which use "transfer-encoding: identity"
-     * to mean "no transfer-coding".  So that case must be ignored. */
+    /* Case (3), chunked transer-encoding.. */
     else if ((value = get_response_header_hv(req, HH_HV_TRANSFER_ENCODING,
                                              "transfer-encoding")) != NULL
              && ne_strcasecmp(value, "identity") != 0) {
@@ -1345,7 +1365,8 @@ int ne_begin_request(ne_request *req)
         else {
             return aborted(req, _("Unknown transfer-coding in response"), 0);
         }
-    } 
+    }
+    /* Case (4) and (5), content-length delimited. */
     else if ((value = get_response_header_hv(req, HH_HV_CONTENT_LENGTH,
                                              "content-length")) != NULL) {
         char *endptr = NULL;
@@ -1354,11 +1375,14 @@ int ne_begin_request(ne_request *req)
         if (*value && len != NE_OFFT_MAX && len >= 0 && endptr && *endptr == '\0') {
             req->resp.mode = R_CLENGTH;
             req->resp.body.clen.total = req->resp.body.clen.remain = len;
-        } else {
-            /* fail for an invalid content-length header. */
+        }
+        else {
+            /* Per case (4), an invalid C-L must be treated as an error. */
             return aborted(req, _("Invalid Content-Length in response"), 0);
         }
-    } else {
+    }
+    /* Case (7), response delimited by EOF. */
+    else {
         req->resp.mode = R_TILLEOF; /* otherwise: read-till-eof mode */
     }
     

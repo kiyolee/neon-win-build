@@ -110,7 +110,7 @@ void t_warning(const char *str, ...)
  NE_DBG_LOCKS | NE_DBG_XMLPARSE | NE_DBG_XML | NE_DBG_SSL | \
  NE_DBG_HTTPPLAIN)
 
-#define W(m) do { if (write(0, m, strlen(m)) < 0) exit(99); } while(0)
+#define W(m) do { if (write(0, m, strlen(m)) < 0) _exit(99); } while(0)
 
 #define W_RED(m) do { if (use_colour) W("\033[41;37;01m"); \
 W(m); if (use_colour) W("\033[00m\n"); } while (0);
@@ -184,6 +184,9 @@ int main(int argc, char *argv[])
 	test_suite++;
     }
 
+    if (strncmp(test_suite, "lt-", 3) == 0)
+        test_suite += 3;
+
 #ifdef HAVE_SETLOCALE
     setlocale(LC_MESSAGES, "");
 #endif
@@ -236,7 +239,7 @@ int main(int argc, char *argv[])
 
     if (ne_sock_init()) {
 	COL("43;01"); printf("WARNING:"); NOCOL;
-	printf(" Socket library initalization failed.\n");
+	printf(" Socket library initialization failed.\n");
     }
 
     if ((tmp = getenv("TEST_QUIET")) != NULL && strcmp(tmp, "1") == 0) {

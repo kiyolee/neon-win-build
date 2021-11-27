@@ -148,14 +148,26 @@ int reset_socket(ne_socket *sock)
 /* close 'sock', performing lingering close to avoid premature RST. */
 static int close_socket(ne_socket *sock)
 {
-#ifdef HAVE_SHUTDOWN
+    int ret;
     char buf[20];
-    int fd = ne_sock_fd(sock);
-    
-    shutdown(fd, 0);
+
+    ret = ne_sock_shutdown(sock, NE_SOCK_SEND);
+    if (ret == 0) {
+	NE_DEBUG(NE_DBG_SOCKET, "ssl: Socket cleanly closed.\n");
+    }
+    else {
+	NE_DEBUG(NE_DBG_SOCKET, "sock: Socket closed uncleanly: %s\n",
+		 ne_sock_error(sock));
+    }
+
+    NE_DEBUG(NE_DBG_SSL, "sock: Lingering close...\n");
+    ne_sock_read_timeout(sock, 5);
     while (ne_sock_read(sock, buf, sizeof buf) > 0);
-#endif
-    return ne_sock_close(sock);
+
+    NE_DEBUG(NE_DBG_SSL, "sock: Closing socket.\n");
+    ret = ne_sock_close(sock);
+    NE_DEBUG(NE_DBG_SSL, "sock: Socket closed (%d).\n", ret);
+    return ret;
 }
 
 /* This runs as the child process. */
@@ -248,87 +260,15 @@ int spawn_server_addr(int bind_local, int port, server_fn fn, void *ud)
     }
 }
 
-int spawn_server_repeat(int port, server_fn fn, void *userdata, int n)
-{
-    int fds[2];
-
-#ifdef USE_PIPE
-    if (pipe(fds)) {
-	perror("spawn_server: pipe");
-	return FAIL;
-    }
-#else
-    /* avoid using uninitialized variable. */
-    fds[0] = fds[1] = 0;
-#endif
-
-    child = fork();
-    
-    if (child == 0) {
-	/* this is the child. */
-	int listener, count = 0;
-	
-	in_child();
-	
-	listener = do_listen(lh_addr, port);
-
-#ifdef USE_PIPE
-	if (write(fds[1], "Z", 1) != 1) abort();
-#endif
-
-	close(fds[1]);
-	close(fds[0]);
-
-	/* Loop serving requests. */
-	while (++count < n) {
-	    ne_socket *sock = ne_sock_create();
-	    int ret;
-
-	    NE_DEBUG(NE_DBG_HTTP, "child awaiting connection #%d.\n", count);
-	    ONN("accept failed", ne_sock_accept(sock, listener));
-	    ret = fn(sock, userdata);
-	    NE_DEBUG(NE_DBG_HTTP, "child handled connection, %d.\n", ret);
-	    close_socket(sock);
-	    if (ret) {
-                printf("server child failed (%s, iteration %d/%d): %s\n", 
-                       tests[test_num].name, count, n, test_context);
-		exit(-1);
-	    }
-	    /* don't send back notification to parent more than
-	     * once. */
-	}
-	
-	NE_DEBUG(NE_DBG_HTTP, "child aborted.\n");
-	close(listener);
-
-	exit(-1);
-    
-    } else {
-	char ch;
-	/* this is the parent. wait for the child to get ready */
-#ifdef USE_PIPE
-	if (read(fds[0], &ch, 1) < 0)
-	    perror("parent read");
-
-	close(fds[0]);
-	close(fds[1]);
-#else
-	minisleep();
-#endif
-    }
-
-    return OK;
-}
-
 int new_spawn_server(int count, server_fn fn, void *userdata,
                      unsigned int *port)
 {
-    ne_inet_addr *addr;
+    ne_inet_addr *addr = NULL;
     int ret;
 
     ret = new_spawn_server2(count, fn, userdata, &addr, port);
-    
-    ne_iaddr_free(addr);
+    if (addr)
+        ne_iaddr_free(addr);
 
     return ret;
 }
@@ -417,6 +357,11 @@ int dead_server(void)
     return OK;
 }
 
+int destroy_and_wait(ne_session *sess)
+{
+    ne_session_destroy(sess);
+    return await_server();
+}
 
 int await_server(void)
 {
@@ -488,6 +433,23 @@ int discard_request(ne_socket *sock)
     
     return OK;
 }
+
+int error_response(ne_socket *sock, int ret)
+{
+    char resp[1024];
+
+    ne_snprintf(resp, sizeof resp,
+                "HTTP/1.1 500 Server Test Failed\r\n"
+                "X-Neon-Context: %s\r\n"
+                "Content-Length: 0\r\n"
+                "Connection: close\r\n"
+                "\r\n",
+                test_context);
+    SEND_STRING(sock, resp);
+
+    return ret;
+}
+
 
 int discard_body(ne_socket *sock)
 {

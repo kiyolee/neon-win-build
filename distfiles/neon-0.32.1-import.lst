@@ -3,7 +3,7 @@ BUGS
 ChangeLog
 INSTALL.win32
 NEWS
-README.neon
+README.neon.md
 THANKS
 TODO
 config.hw
@@ -94,6 +94,7 @@ test/htdocs/plain
 test/largefile.c
 test/lock.c
 test/makekeys.sh
+test/neon.prio
 test/notvalid.pem
 test/nulca.pem
 test/nulcn.pem

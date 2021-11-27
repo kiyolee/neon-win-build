@@ -1,6 +1,6 @@
 /* 
    WebDAV Class 2 locking operations
-   Copyright (C) 1999-2006, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 1999-2021, Joe Orton <joe@manyfish.co.uk>
 
    This library is free software; you can redistribute it and/or
    modify it under the terms of the GNU Library General Public
@@ -127,7 +127,11 @@ NEON_API(int) ne_lock(ne_session *sess, struct ne_lock *lock);
 /* Issue an UNLOCK request for the given lock */
 NEON_API(int) ne_unlock(ne_session *sess, const struct ne_lock *lock);
 
-/* Refresh a lock. Updates lock->timeout appropriately. */
+/* Refresh a lock; returns an NE_* code.  If lock->timeout is non-zero
+ * on entry, the server is requested to update the lock timeout to the
+ * given value (per RFC4918§7.7, servers MAY ignore the requested
+ * timeout).  On success, lock->timeout is updated to the new timeout
+ * given by the server. */
 NEON_API(int) ne_lock_refresh(ne_session *sess, struct ne_lock *lock);
 
 /* Callback for lock discovery.  If 'lock' is NULL, something went
@@ -142,7 +146,7 @@ typedef void (*ne_lock_result)(void *userdata, const struct ne_lock *lock,
 /* Perform lock discovery on the given path.  'result' is called with
  * the results (possibly >1 times).  */
 NEON_API(int) ne_lock_discover(ne_session *sess, const char *path,
-		               ne_lock_result result, void *userdata);
+		                       ne_lock_result result, void *userdata);
 
 /* The ne_lock_using_* functions should be used before dispatching a
  * request which modify resources.  If a lock store has been

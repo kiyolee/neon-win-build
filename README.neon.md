@@ -1,30 +1,34 @@
 
-neon is an HTTP and WebDAV client library, with a C language API.
+[![Travis CI Build Status](https://travis-ci.com/notroj/neon.svg?branch=master)](https://travis-ci.com/github/notroj/neon)
+[![Build and test](https://github.com/notroj/neon/actions/workflows/ci.yml/badge.svg)](https://github.com/notroj/neon/actions/workflows/ci.yml)
 
-Mailing list: neon@lists.manyfish.co.uk || Web site: http://www.webdav.org/neon/
+# neon
 
-PLEASE NOTE: The neon API is subject to backwards-incompatible change
-over minor releases (0.23.x -> 0.24.x) until the 1.0.0 release, but
-maintains source and binary backwards compatibility through patch
-releases (0.24.0 -> 0.24.7).
+_neon_ is an HTTP and WebDAV client library, with a C language API.
 
-Current features:
+Mailing list: neon@lists.manyfish.co.uk || Web site: https://notroj.github.io/neon/
+
+The neon API and ABI are stable and maintain backwards compatibility
+from 0.27.x through 0.31.x.
+
+Features:
 
  - High-level interface to HTTP and WebDAV methods.
  - Low-level interface to HTTP request handling, to allow implementing
    new methods easily.
  - Persistent connection support (HTTP/1.1 and HTTP/1.0 aware)
- - Basic and digest authentication (RFC2617) (including auth-int, md5-sess)
- - Proxy support (including basic/digest authentication)
- - SSL/TLS support using OpenSSL (including client certificate support)
+ - Basic and Digest authentication (RFC 7616/7617, including SHA-2, userhash)
+ - Kerberos (Negotiate) and SSPI/NTLM authentication (Unix and Windows)
+ - HTTP and SOCKS (v4/5) proxy support (including authentication)
+ - SSL/TLS support using OpenSSL or GnuTLS (client certs via files or PKCS#11)
  - Generic WebDAV 207 XML response handling mechanism
- - XML parsing using expat or libxml (1.x or 2.x) parser
+ - XML parsing using expat or libxml2
  - Easy generation of error messages from 207 error responses
  - Basic HTTP/1.1 methods: GET, PUT, HEAD, OPTIONS, conditional PUT
  - WebDAV resource manipulation: MOVE, COPY, DELETE, MKCOL.
  - WebDAV metadata support: set and remove properties (PROPPATCH), query
    any set of properties (PROPFIND).
- - WebDAV locking support
+ - WebDAV locking and ACL (RFC 3744) support
  - Autoconf macros supplied for easily embedding neon directly inside 
    an application source tree.
 
@@ -38,20 +42,22 @@ licensed under the terms of the GNU GPL; see test/COPYING for terms.
 The autoconf macros in the "macros" directory are under a less
 restrictive license, see each file for details.
 
-neon is Copyright (C) 1999-2008 Joe Orton <joe@manyfish.co.uk>
+~~~
+neon is Copyright (C) 1999-2021 Joe Orton
 Portions are:
-Copyright (C) Aleix Conchillo Flaque <aleix@member.fsf.org>
+Copyright (C) Aleix Conchillo Flaque
 Copyright (C) Arfrever Frehtes Taifersar Arahesis
-Copyright (C) Arun Garg <arung@pspl.co.in>
-Copyright (C) Daniel Stenberg <daniel@haxx.se>
+Copyright (C) Arun Garg
+Copyright (C) Daniel Stenberg
 Copyright (C) Free Software Foundation, Inc.
-Copyright (C) Henrik Holst <henrik.holst2@gmail.com>
-Copyright (C) Jiang Lei <tristone@deluxe.ocn.ne.jp>
-Copyright (C) Kai Sommerfeld <kso@openoffice.org>
+Copyright (C) Henrik Holst
+Copyright (C) Jiang Lei
+Copyright (C) Kai Sommerfeld
 Copyright (C) Karl Ove Hufthammer.
 Copyright (C) Michael Sobolev
-Copyright (C) Nobuyuki Tsuchimura <tutimura@nn.iij4u.or.jp>
-Copyright (C) Sylvain Glaize <mokona@puupuu.org>
-Copyright (C) Thomas Schultz <tststs@gmx.de>
-Copyright (C) Vladimir Berezniker @ http://public.xdi.org/=vmpn
-Copyright (C) Yves Martin  <ymartin59@free.fr>
+Copyright (C) Nobuyuki Tsuchimura
+Copyright (C) Sylvain Glaize
+Copyright (C) Thomas Schultz
+Copyright (C) Vladimir Berezniker
+Copyright (C) Yves Martin
+~~~

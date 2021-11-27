@@ -66,7 +66,12 @@ static ne_ssl_client_cert *def_cli_cert;
 static char *nul_cn_fn;
 
 static int check_dname(const ne_ssl_dname *dn, const char *expected,
-                       const char *which);
+                       const char *which)
+    ne_attribute((nonnull));
+
+static int check_cert_dnames(const ne_ssl_certificate *cert,
+                             const char *subject, const char *issuer)
+    ne_attribute((nonnull (2)));
 
 /* Arguments for running the SSL server */
 struct ssl_server_args {
@@ -201,18 +206,67 @@ static int fail_serve(ne_socket *sock, void *ud)
 
 #define DEFSESS  (ne_session_create("https", "localhost", 7777))
 
+static int make_ssl_session_port(ne_session **sess,
+                                 const char *hostname, int port,
+                                 server_fn fn, void *userdata)
+{
+    return fakeproxied_session_server(sess, "https", hostname, port,
+                                      fn, userdata);
+}
+
+static int make_ssl_session(ne_session **sess, const char *hostname,
+                            server_fn fn, void *userdata)
+{
+    return make_ssl_session_port(sess,
+                                 hostname ? hostname : "localhost", 7777,
+                                 fn, userdata);
+}
+
+/* Runs SSL server which will accept 'count' connections, running
+ * ssl_server as callback with given 'args'. */
+static int multi_ssl_session(int count, ne_session **sess,
+                             struct ssl_server_args *args)
+{
+    return fakeproxied_multi_session_server(count, sess, "https",
+                                            "localhost",
+                                            7777,
+                                            ssl_server, args);
+}
+
+
+static int load_and_trust_cert(ne_session *sess, const char *ca_cert)
+{
+    ne_ssl_certificate *ca = ne_ssl_cert_read(ca_cert);
+    ONV(ca == NULL, ("could not load CA cert `%s'", ca_cert));
+    ne_ssl_trust_cert(sess, ca);
+    ne_ssl_cert_free(ca);
+    return OK;
+}
+
+static int make_ssl_request(struct ssl_server_args *args,
+                            const char *ca_cert, const char *hostname,
+                            ne_ssl_verify_fn verify_fn, void *verify_ud)
+{
+    ne_session *sess;
+
+    CALL(make_ssl_session(&sess, hostname, ssl_server, args));
+
+    if (ca_cert) CALL(load_and_trust_cert(sess, ca_cert));
+    
+    if (verify_fn) ne_ssl_set_verify(sess, verify_fn, verify_ud);
+
+    CALL(any_2xx_request(sess, "/foo"));
+
+    return destroy_and_wait(sess);
+}
+
 /* Run a request in the given session. */
 static int any_ssl_request(ne_session *sess, server_fn fn, void *server_ud,
 			   char *ca_cert,
 			   ne_ssl_verify_fn verify_fn, void *verify_ud)
 {
-    int ret;
-    
     if (ca_cert) {
-        ne_ssl_certificate *ca = ne_ssl_cert_read(ca_cert);
-        ONV(ca == NULL, ("could not load CA cert `%s'", ca_cert));
-        ne_ssl_trust_cert(sess, ca);
-        ne_ssl_cert_free(ca);
+        CALL(load_and_trust_cert(sess, ca_cert));
     }
 
     CALL(spawn_server(7777, fn, server_ud));
@@ -220,13 +274,9 @@ static int any_ssl_request(ne_session *sess, server_fn fn, void *server_ud,
     if (verify_fn)
 	ne_ssl_set_verify(sess, verify_fn, verify_ud);
 
-    ret = any_request(sess, "/foo");
+    ONREQ(any_request(sess, "/foo"));
 
-    CALL(await_server());
-    
-    ONREQ(ret);
-
-    return OK;
+    return await_server();
 }
 
 static int init(void)
@@ -400,15 +450,13 @@ static int clicert_import(void)
 }
 
 /* Test that 'cert', which is signed by CA_CERT, is accepted
- * unconditionaly. */
+ * unconditionally. */
 static int accept_signed_cert_for_hostname(char *cert, const char *hostname)
 {
-    ne_session *sess = ne_session_create("https", hostname, 7777);
     struct ssl_server_args args = {cert, 0};
+
     /* no verify callback needed. */
-    CALL(any_ssl_request(sess, ssl_server, &args, CA_CERT, NULL, NULL));
-    ne_session_destroy(sess);
-    return OK;
+    return make_ssl_request(&args, CA_CERT, hostname, NULL, NULL);
 }
 
 
@@ -444,51 +492,34 @@ static int simple_sslv2(void)
 }
 #endif
 
-/* Serves using HTTP/1.0 get-till-EOF semantics. */
-static int serve_eof(ne_socket *sock, void *ud)
+/* Test read-til-EOF behaviour with SSL. */
+static int simple_eof(void)
 {
-    struct ssl_server_args args = {0};
+    struct ssl_server_args args = {SERVER_CERT, 0};
 
-    args.cert = ud;
     args.response = "HTTP/1.0 200 OK\r\n"
         "Connection: close\r\n"
         "\r\n"
         "This is a response body, like it or not.";
 
-    return ssl_server(sock, &args);
-}
-
-/* Test read-til-EOF behaviour with SSL. */
-static int simple_eof(void)
-{
-    ne_session *sess = DEFSESS;
-
-    CALL(any_ssl_request(sess, serve_eof, SERVER_CERT, CA_CERT, NULL, NULL));
-    ne_session_destroy(sess);
-    return OK;
+    return make_ssl_request(&args, CA_CERT, NULL, NULL, NULL);
 }
 
 static int intermediary(void)
 {
-    ne_session *sess = DEFSESS;
     struct ssl_server_args args = {CA2_SERVER_CERT, 0};
-    CALL(any_ssl_request(sess, ssl_server, &args, CA_CERT, NULL, NULL));
-    ne_session_destroy(sess);
-    return OK;
+
+    return make_ssl_request(&args, CA_CERT, NULL, NULL, NULL);
 }
 
 static int empty_truncated_eof(void)
 {
-    ne_session *sess = DEFSESS;
     struct ssl_server_args args = {0};
 
     args.cert = SERVER_CERT;
     args.response = "HTTP/1.0 200 OK\r\n" "\r\n";
     
-    CALL(any_ssl_request(sess, ssl_server, &args, CA_CERT, NULL, NULL));
-
-    ne_session_destroy(sess);
-    return OK;
+    return make_ssl_request(&args, CA_CERT, NULL, NULL, NULL);
 }
 
 /* Server function which just sends a string then EOF. */
@@ -502,57 +533,28 @@ static int just_serve_string(ne_socket *sock, void *userdata)
 /* test for the SSL negotiation failing. */
 static int fail_not_ssl(void)
 {
-    ne_session *sess = DEFSESS;
+    ne_session *sess;
     int ret;
     
-    CALL(spawn_server(7777, just_serve_string, "Hello, world.\n"));
+    CALL(make_ssl_session(&sess, NULL, just_serve_string, "Hello, world.\n"));
     ret = any_request(sess, "/bar");
-    CALL(await_server());
-
     ONN("request did not fail", ret != NE_ERROR);
 
-    ne_session_destroy(sess);
-    return OK;
-}
-
-/* Server callback which handles a CONNECT request. */
-static int tunnel_server(ne_socket *sock, void *ud)
-{
-    struct ssl_server_args *args = ud;
-
-    CALL(discard_request(sock));
-
-    SEND_STRING(sock, "HTTP/1.1 200 OK\r\nServer: serve_tunnel\r\n\r\n");
-    
-    return ssl_server(sock, args);
+    return destroy_and_wait(sess);
 }
 
 static int wildcard_match(void)
 {
-    ne_session *sess;
     struct ssl_server_args args = {"wildcard.cert", 0};
-    
-    sess = ne_session_create("https", "anything.example.com", 443);
-    ne_session_proxy(sess, "localhost", 7777);
 
-    CALL(any_ssl_request(sess, tunnel_server, &args, CA_CERT, NULL, NULL));
-    ne_session_destroy(sess);
-    
-    return OK;
+    return make_ssl_request(&args, CA_CERT, "bar.example.com", NULL, NULL);
 }
 
 static int wildcard_match_altname(void)
 {
-    ne_session *sess;
     struct ssl_server_args args = {"altname9.cert", 0};
-    
-    sess = ne_session_create("https", "anything.example.com", 443);
-    ne_session_proxy(sess, "localhost", 7777);
 
-    CALL(any_ssl_request(sess, tunnel_server, &args, CA_CERT, NULL, NULL));
-    ne_session_destroy(sess);
-    
-    return OK;
+    return make_ssl_request(&args, CA_CERT, "foo.example.com", NULL, NULL);
 }
 
 /* Check that hostname comparisons are not cases-sensitive. */
@@ -620,7 +622,7 @@ static int check_dname(const ne_ssl_dname *dn, const char *expected,
 
     NE_DEBUG(NE_DBG_SSL, "Got dname `%s', expecting `%s'\n", dname, expected);
 
-    ONV(strcmp(dname, expected), 
+    ONV(!dname || strcmp(dname, expected),
         ("certificate %s dname was `%s' not `%s'", which, dname, expected));
 
     ne_free(dname);
@@ -655,15 +657,12 @@ static int check_cert(void *userdata, int fs, const ne_ssl_certificate *cert)
 /* Check that certificate attributes are passed correctly. */
 static int parse_cert(void)
 {
-    ne_session *sess = DEFSESS;
-    int ret = 0;
     struct ssl_server_args args = {SERVER_CERT, 0};
+    int ret = 0;
 
     /* don't give a CA cert; should force the verify callback to be
      * used. */
-    CALL(any_ssl_request(sess, ssl_server, &args, NULL, 
-			 check_cert, &ret));
-    ne_session_destroy(sess);
+    CALL(make_ssl_request(&args, NULL, NULL, check_cert, &ret));
 
     ONN("cert verification never called", ret == 0);
 
@@ -705,7 +704,6 @@ static int check_chain(void *userdata, int fs, const ne_ssl_certificate *cert)
 /* Check that certificate attributes are passed correctly. */
 static int parse_chain(void)
 {
-    ne_session *sess = DEFSESS;
     int ret = 0;
     struct ssl_server_args args = {"wrongcn.cert", 0};
 
@@ -713,9 +711,7 @@ static int parse_chain(void)
 
     /* The cert is signed by the CA but has a CN mismatch, so will
      * force the verification callback to be invoked. */
-    CALL(any_ssl_request(sess, ssl_server, &args, CA_CERT, 
-			 check_chain, &ret));
-    ne_session_destroy(sess);
+    CALL(make_ssl_request(&args, CA_CERT, NULL, check_chain, &ret));
 
     ONN("cert verification never called", ret == 0);
 
@@ -735,33 +731,30 @@ static int count_vfy(void *userdata, int fs, const ne_ssl_certificate *c)
 
 static int no_verify(void)
 {
-    ne_session *sess = DEFSESS;
     int count = 0;
     struct ssl_server_args args = {SERVER_CERT, 0};
 
-    CALL(any_ssl_request(sess, ssl_server, &args, CA_CERT, count_vfy,
-			 &count));
+    CALL(make_ssl_request(&args, CA_CERT, NULL, count_vfy, &count));
 
     ONN("verify callback called unnecessarily", count != 0);
-
-    ne_session_destroy(sess);
 
     return OK;
 }
 
+/* Checks that the verify callback is only called on the first
+ * connection to the SSL server, and not on subsequent connections. */
 static int cache_verify(void)
 {
-    ne_session *sess = DEFSESS;
+    ne_session *sess;
     int count = 0;
     struct ssl_server_args args = {SERVER_CERT, 0};
-    
-    /* force verify cert. */
-    CALL(any_ssl_request(sess, ssl_server, &args, NULL, count_vfy,
-                         &count));
 
-    CALL(spawn_server(7777, ssl_server, &args));
-    ONREQ(any_request(sess, "/foo2"));
-    CALL(await_server());
+    CALL(multi_ssl_session(2, &sess, &args));
+
+    ne_ssl_set_verify(sess, count_vfy, &count);
+
+    ONREQ(any_request(sess, "/foo-alpha"));
+    ONREQ(any_request(sess, "/foo-beta"));
 
     ONV(count != 1,
 	("verify callback result not cached: called %d times", count));
@@ -834,8 +827,8 @@ static int fail_ssl_request_with_error2(char *cert, char *key, char *cacert,
 			  get_failures, &gotf);
 
     ONV(gotf == 0,
-	("no error in verification callback; error string: %s",
-	 ne_get_error(sess)));
+	("no error in verification callback; request rv %d error string: %s",
+	 ret, ne_get_error(sess)));
 
     ONV(gotf & ~NE_SSL_FAILMASK,
 	("verification flags %x outside mask %x", gotf, NE_SSL_FAILMASK));
@@ -853,6 +846,7 @@ static int fail_ssl_request_with_error2(char *cert, char *key, char *cacert,
         
     ne_session_destroy(sess);
     if (addr) ne_addr_destroy(addr);
+    if (list) ne_free(list);
 
     return OK;
 }
@@ -895,13 +889,14 @@ static int fail_wrongCN(void)
 
 #define SRCDIR(s) ne_concat(srcdir, "/" s, NULL)
 
+#if 0
 static int fail_nul_cn(void)
 {
     char *key = SRCDIR("nulsrv.key"), *ca = SRCDIR("nulca.pem");
     CALL(fail_ssl_request_with_error2(nul_cn_fn, key, ca,
                                       "www.bank.com", "localhost",
                                       "certificate with incorrect CN was accepted",
-                                      NE_SSL_IDMISMATCH,
+                                      NE_SSL_IDMISMATCH|NE_SSL_EXPIRED|NE_SSL_BADCHAIN,
                                       "certificate issued for a different hostname"));
     ne_free(key);
     ne_free(ca);
@@ -915,13 +910,14 @@ static int fail_nul_san(void)
     CALL(fail_ssl_request_with_error2(cert, key, ca, 
                                       "www.bank.com", "localhost",
                                       "certificate with incorrect CN was accepted",
-                                      NE_SSL_IDMISMATCH,
+                                      NE_SSL_IDMISMATCH|NE_SSL_EXPIRED|NE_SSL_BADCHAIN,
                                       "certificate issued for a different hostname"));
     ne_free(cert);
     ne_free(key);
     ne_free(ca);
     return OK;
 }
+#endif
 
 /* Check that an expired certificate is flagged as such. */
 static int fail_expired(void)
@@ -1019,31 +1015,27 @@ static int fail_ca_notyetvalid(void)
                             "issuer ca not yet valid", NE_SSL_BADCHAIN);
 }
 
+#if 0
 /* Test that the SSL session is cached across connections. */
 static int session_cache(void)
 {
     struct ssl_server_args args = {0};
-    ne_session *sess = ne_session_create("https", "localhost", 7777);
-    
+    ne_session *sess;
+
     args.cert = SERVER_CERT;
     args.cache = 1;
 
-    ne_ssl_trust_cert(sess, def_ca_cert);
+    CALL(multi_session_server(&sess, "https", "localhost",
+                              2, ssl_server, &args));
 
-    /* have spawned server listen for several connections. */
-    CALL(spawn_server_repeat(7777, ssl_server, &args, 4));
+    ne_ssl_trust_cert(sess, def_ca_cert);
 
     ONREQ(any_request(sess, "/req1"));
     ONREQ(any_request(sess, "/req2"));
-    ne_session_destroy(sess);
-    /* server should still be waiting for connections: if not,
-     * something went wrong. */
-    ONN("error from child", dead_server());
-    /* now get rid of it. */
-    reap_server();
 
-    return OK;
+    return destroy_and_wait(sess);
 }
+#endif
 
 /* Callback for client_cert_provider; takes a c. cert as userdata and
  * registers it. */
@@ -1201,28 +1193,31 @@ static int ccert_unencrypted(void)
 }
 
 #define NOCERT_MESSAGE "client certificate was requested"
+/* random SSL read may fail like this with TLSv1.3 */
+#define NOCERT_ALT "certificate required"
 
 /* Tests for useful error message if a handshake fails where a client
  * cert was requested. */
 static int no_client_cert(void)
 {
-    ne_session *sess = DEFSESS;
+    ne_session *sess;
     struct ssl_server_args args = {SERVER_CERT, NULL};
     int ret;
 
     args.require_cc = 1;
     args.fail_silently = 1;
 
-    ne_ssl_trust_cert(sess, def_ca_cert);
+    CALL(make_ssl_session(&sess, NULL, ssl_server, &args));
 
-    CALL(spawn_server(7777, ssl_server, &args));
+    ne_ssl_trust_cert(sess, def_ca_cert);
     
     ret = any_request(sess, "/failme");
 
     ONV(ret != NE_ERROR,
         ("unexpected result %d: %s", ret, ne_get_error(sess)));
 
-    ONV(strstr(ne_get_error(sess), NOCERT_MESSAGE) == NULL,
+    ONV(strstr(ne_get_error(sess), NOCERT_MESSAGE) == NULL
+        && strstr(ne_get_error(sess), NOCERT_ALT) == NULL,
         ("error message was '%s', missing '%s'", 
          ne_get_error(sess), NOCERT_MESSAGE));
     
@@ -1349,11 +1344,9 @@ static int auth_proxy_tunnel(void)
     /* run two requests over the tunnel. */
     ret = any_2xx_request(sess, "/foobar");
     if (!ret) ret = any_2xx_request(sess, "/foobar2");
-    CALL(await_server());
     CALL(ret);
 
-    ne_session_destroy(sess);
-    return 0;
+    return destroy_and_wait(sess);
 }
 
 /* Regression test to check that server credentials aren't sent to the
@@ -1361,7 +1354,7 @@ static int auth_proxy_tunnel(void)
 static int auth_tunnel_creds(void)
 {
     ne_session *sess = ne_session_create("https", "localhost", 443);
-    int ret, code = 401;
+    int code = 401;
     struct ssl_server_args args = {SERVER_CERT, 0};
     
     ne_session_proxy(sess, "localhost", 7777);
@@ -1374,12 +1367,9 @@ static int auth_tunnel_creds(void)
         "Server: Python\r\n" "Content-Length: 0\r\n" "\r\n";
     
     CALL(spawn_server(7777, serve_tunnel, &args));
-    ret = any_2xx_request(sess, "/foobar");
-    CALL(await_server());
-    CALL(ret);
+    CALL(any_2xx_request(sess, "/foobar"));
 
-    ne_session_destroy(sess);
-    return OK;    
+    return destroy_and_wait(sess);
 }
 
 static int auth_tunnel_fail(void)
@@ -1403,9 +1393,7 @@ static int auth_tunnel_fail(void)
     ONV(strstr(ne_get_error(sess), "GaBoogle") == NULL,
         ("bad error string for tunnel failure: %s", ne_get_error(sess)));
 
-    ne_session_destroy(sess);
-
-    return await_server();
+    return destroy_and_wait(sess);
 }
 
 /* compare against known digest of notvalid.pem.  Via:
@@ -1428,6 +1416,52 @@ static int cert_fingerprint(void)
 
     ONV(strcmp(digest, THE_DIGEST),
         ("digest was %s not %s", digest, THE_DIGEST));
+
+    return OK;
+}
+
+static int cert_hdigests(void)
+{
+    static const struct {
+        unsigned int flags;
+        const char *digest;
+    } ts[] = {
+        { NE_HASH_MD5|NE_HASH_COLON, "76:26:eb:db:09:e8:53:5c:79:61:0c:30:3d:77:ed:65" },
+        { NE_HASH_MD5, "7626ebdb09e8535c79610c303d77ed65" },
+        { NE_HASH_SHA256, "ea4a4f4f08a91a83e841e772171a2befa3f6e576b5cd9f5cd6d12e9683fe89b3" },
+        { NE_HASH_SHA512, "35373c533f4000ee9b6173a45eedae732f6c953dcf76f5fba5ffb7be380de559893d0679e94051950be2a5917fa7922fbf50ef10222d5be4eea53ba948cf7703" },
+        { 0, NULL }
+    };
+    unsigned int n, passed = 0;
+    char *fn = ne_concat(srcdir, "/notvalid.pem", NULL);
+    ne_ssl_certificate *cert = ne_ssl_cert_read(fn);
+
+    ONN("could not load notvalid.pem", cert == NULL);
+
+    for (n = 0; ts[n].flags; n++) {
+        char *dig = ne_ssl_cert_hdigest(cert, ts[n].flags);
+
+        /* Can reasonably for almost any hash (either too modern or
+         * too old), so what can you do? */
+        if (dig == NULL) {
+            t_warning("failed to htdigest with flags %u", ts[n].flags);
+            continue;
+        }
+
+        NE_DEBUG(NE_DBG_SSL, "ssl: hDigest %u got %s, expected %s\n",
+                 ts[n].flags, dig, ts[n].digest);
+
+        ONV(strcmp(dig, ts[n].digest),
+            ("digest was %s not %s", dig, ts[n].digest));
+
+        passed++;
+        ne_free(dig);
+    }
+
+    ONN("no algorithms supported for ne_ssl_cert_hdigest", passed == 0);
+
+    ne_ssl_cert_free(cert);
+    ne_free(fn);
 
     return OK;
 }
@@ -1583,7 +1617,7 @@ static int dname_readable(void)
         { "bmpsubj.cert", I18N_DNAME, NULL },
         { "utf8subj.cert", I18N_DNAME, NULL },
         { "twoou.cert", "First OU Dept, Second OU Dept, Neon Hackers Ltd, "
-          "Cambridge, Cambridgeshire, GB" }
+          "Cambridge, Cambridgeshire, GB", NULL }
     };
     size_t n;
 
@@ -1881,6 +1915,7 @@ ne_test tests[] = {
     T(trust_default_ca),
 
     T(cert_fingerprint),
+    T(cert_hdigests),
     T(cert_identities),
     T(cert_validity),
     T(cert_compare),
@@ -1943,11 +1978,17 @@ ne_test tests[] = {
     T(fail_ca_expired),
 
     T(nulcn_identity),
+#if 0
+    /* These certs were created with a SHA#1 digest so are rejected by
+     * modern TLS libraries. */
     T(fail_nul_cn),
     T(fail_nul_san),
-    
+#endif
+
+#if 0
     T(session_cache),
-	
+#endif
+
     T(fail_tunnel),
     T(proxy_tunnel),
     T(auth_proxy_tunnel),

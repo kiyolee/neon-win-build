@@ -1,6 +1,6 @@
 /* 
    WebDAV 207 multi-status response handling
-   Copyright (C) 1999-2006, Joe Orton <joe@manyfish.co.uk>
+   Copyright (C) 1999-2021, Joe Orton <joe@manyfish.co.uk>
 
    This library is free software; you can redistribute it and/or
    modify it under the terms of the GNU Library General Public
@@ -70,6 +70,12 @@ typedef struct ne_207_parser_s ne_207_parser;
  * relative to the base URI 'base'. */
 NEON_API(ne_207_parser *) ne_207_create(ne_xml_parser *parser, const ne_uri *base, 
                                         void *userdata);
+
+/* Enable special href escaping hacks for Microsoft SharePoint. */
+#define NE_207_MSSP_ESCAPING (0x0001)
+
+/* Set given flags for the parser. */
+NEON_API(void) ne_207_set_flags(ne_207_parser *p, unsigned int flags);
 
 /* Register response handling callbacks. */
 NEON_API(void) ne_207_set_response_handlers(ne_207_parser *p,
