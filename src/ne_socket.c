@@ -2020,6 +2020,7 @@ void ne_sock_set_error(ne_socket *sock, const char *format, ...)
 int ne_sock_shutdown(ne_socket *sock, unsigned int flags)
 {
     int ret;
+    int how;
 
     if (!flags) {
         set_error(sock, _("Missing flags for socket shutdown"));
@@ -2079,9 +2080,9 @@ int ne_sock_shutdown(ne_socket *sock, unsigned int flags)
 #endif
 
 #ifdef _WIN32
-    int how = flags == NE_SOCK_RECV ? SD_RECEIVE : (flags == NE_SOCK_SEND ? SD_SEND : SD_BOTH);
+    how = flags == NE_SOCK_RECV ? SD_RECEIVE : (flags == NE_SOCK_SEND ? SD_SEND : SD_BOTH);
 #else
-    int how = flags == NE_SOCK_RECV ? SHUT_RD : (flags == NE_SOCK_SEND ? SHUT_WR : SHUT_RDWR);
+    how = flags == NE_SOCK_RECV ? SHUT_RD : (flags == NE_SOCK_SEND ? SHUT_WR : SHUT_RDWR);
 #endif
     ret = shutdown(sock->fd, how);
     if (ret < 0) {
