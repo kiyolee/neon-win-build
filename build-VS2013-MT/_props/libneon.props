@@ -4,7 +4,7 @@
     <Import Project="vs_common.props" />
     <Import Project="win-build.props" />
     <Import Project="zlib.props" />
-    <Import Project="openssl3.props" />
+    <Import Project="openssl1_0.props" />
     <Import Project="expat.props" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
