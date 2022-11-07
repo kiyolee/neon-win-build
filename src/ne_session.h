@@ -36,21 +36,21 @@ typedef struct ne_session_s ne_session;
 /* Create a session to the given server, using the given scheme.  If
  * "https" is passed as the scheme, SSL will be used to connect to the
  * server. */
-NEON_API(ne_session *) ne_session_create(const char *scheme,
-                                         const char *hostname, unsigned int port);
+NE_API ne_session * ne_session_create(const char *scheme,
+                                      const char *hostname, unsigned int port);
 
 /* Finish an HTTP session */
-NEON_API(void) ne_session_destroy(ne_session *sess);
+NE_API void ne_session_destroy(ne_session *sess);
 
 /* Prematurely force the connection to be closed for the given
  * session. */
-NEON_API(void) ne_close_connection(ne_session *sess);
+NE_API void ne_close_connection(ne_session *sess);
 
 /* Configure an HTTP proxy server for the session.  This function will
  * override (remove) any proxy servers previously configured, and must
  * be called before any requests are created using this session. */
-NEON_API(void) ne_session_proxy(ne_session *sess,
-                                const char *hostname, unsigned int port);
+NE_API void ne_session_proxy(ne_session *sess,
+                             const char *hostname, unsigned int port);
 
 /* Configure a SOCKS proxy server which will be used for the session.
  * The SOCKS protocol version 'vers' will be used to contact the
@@ -63,16 +63,16 @@ NEON_API(void) ne_session_proxy(ne_session *sess,
  * This function will override (remove) any proxy servers previously
  * configured, and must be called before any requests are created
  * using this session. */
-NEON_API(void) ne_session_socks_proxy(ne_session *sess, enum ne_sock_sversion vers,
-                                      const char *hostname, unsigned int port,
-                                      const char *username, const char *password);
+NE_API void ne_session_socks_proxy(ne_session *sess, enum ne_sock_sversion vers,
+                                   const char *hostname, unsigned int port,
+                                   const char *username, const char *password);
 
 /* Configure use of proxy servers from any system-wide default sources
  * which are configured at build time.  This function will override
  * (remove) any proxy servers previously configured, and must be
  * called before any requests are created using this session.  The
  * 'flags' parameter must be zero.  */
-NEON_API(void) ne_session_system_proxy(ne_session *sess, unsigned int flags);
+NE_API void ne_session_system_proxy(ne_session *sess, unsigned int flags);
 
 /* Defined session flags: */
 typedef enum ne_session_flag_e {
@@ -108,11 +108,11 @@ typedef enum ne_session_flag_e {
 } ne_session_flag;
 
 /* Set a new value for a particular session flag. */
-NEON_API(void) ne_set_session_flag(ne_session *sess, ne_session_flag flag, int value);
+NE_API void ne_set_session_flag(ne_session *sess, ne_session_flag flag, int value);
 
 /* Return 0 if the given flag is not set, >0 it is set, or -1 if the
  * flag is not supported. */
-NEON_API(int) ne_get_session_flag(ne_session *sess, ne_session_flag flag);
+NE_API int ne_get_session_flag(ne_session *sess, ne_session_flag flag);
 
 /* Bypass the normal name resolution; force the use of specific set of
  * addresses for this session, addrs[0]...addrs[n-1].  The 'addrs'
@@ -120,7 +120,7 @@ NEON_API(int) ne_get_session_flag(ne_session *sess, ne_session_flag flag);
  * destroyed.  This function will override (remove) any proxy servers
  * previously configured, and must be called before any requests are
  * created using this session.  */
-NEON_API(void) ne_set_addrlist(ne_session *sess, const ne_inet_addr **addrs, size_t n);
+NE_API void ne_set_addrlist(ne_session *sess, const ne_inet_addr **addrs, size_t n);
 
 /* Bypass the normal name resolution; force the use of specific set of
  * addresses for this session, addrs[0]...addrs[n-1].  The 'addrs'
@@ -129,14 +129,14 @@ NEON_API(void) ne_set_addrlist(ne_session *sess, const ne_inet_addr **addrs, siz
  * previously configured, and must be called before any requests are
  * created using this session.  Port number 'port' will be used
  * instead of the "real" session port, to connect to the proxy. */
-NEON_API(void) ne_set_addrlist2(ne_session *sess, unsigned int port, 
-                                const ne_inet_addr **addrs, size_t n);
+NE_API void ne_set_addrlist2(ne_session *sess, unsigned int port, 
+                             const ne_inet_addr **addrs, size_t n);
 
 /* Bind connections to the specified local address.  If the address
  * determined for the remote host has a different family (type) to
  * 'addr', 'addr' will be ignored.  The 'addr' object must remain
  * valid until the session is destroyed. */
-NEON_API(void) ne_set_localaddr(ne_session *sess, const ne_inet_addr *addr);
+NE_API void ne_set_localaddr(ne_session *sess, const ne_inet_addr *addr);
 
 /* DEPRECATED: Progress callback. */
 typedef void (*ne_progress)(void *userdata, ne_off_t progress, ne_off_t total);
@@ -152,12 +152,12 @@ typedef void (*ne_progress)(void *userdata, ne_off_t progress, ne_off_t total);
  * NOTE: Use of this interface is mutually exclusive with the use of
  * ne_set_notifier().  A call to ne_set_progress() removes the
  * notifier callback, and vice versa. */
-NEON_API(void) ne_set_progress(ne_session *sess, ne_progress progress, void *userdata);
+NE_API void ne_set_progress(ne_session *sess, ne_progress progress, void *userdata);
 
 /* Store an opaque context for the session, 'priv' is returned by a
  * call to ne_session_get_private with the same ID. */
-NEON_API(void) ne_set_session_private(ne_session *sess, const char *id, void *priv);
-NEON_API(void *) ne_get_session_private(ne_session *sess, const char *id);
+NE_API void ne_set_session_private(ne_session *sess, const char *id, void *priv);
+NE_API void * ne_get_session_private(ne_session *sess, const char *id);
 
 /* Status event type.  NOTE: More event types may be added in
  * subsequent releases, so callers must ignore unknown status types
@@ -216,7 +216,7 @@ typedef void (*ne_notify_status)(void *userdata, ne_session_status status,
  * NOTE: Use of this interface is mutually exclusive with the use of
  * ne_set_progress().  A call to ne_set_notifier() removes the
  * progress callback, and vice versa. */
-NEON_API(void) ne_set_notifier(ne_session *sess, ne_notify_status status, void *userdata);
+NE_API void ne_set_notifier(ne_session *sess, ne_notify_status status, void *userdata);
 
 /* Certificate verification failures. */
 
@@ -267,22 +267,22 @@ typedef int (*ne_ssl_verify_fn)(void *userdata, int failures,
 /* Install a callback to handle server certificate verification.  This
  * is required when the CA certificate is not known for the server
  * certificate, or the server cert has other verification problems. */
-NEON_API(void) ne_ssl_set_verify(ne_session *sess, ne_ssl_verify_fn fn, void *userdata);
+NE_API void ne_ssl_set_verify(ne_session *sess, ne_ssl_verify_fn fn, void *userdata);
 
 /* Use the given client certificate for the session.  The client cert
  * MUST be in the decrypted state, otherwise behaviour is undefined.
  * The 'clicert' object is duplicated internally so can be destroyed
  * by the caller.  */
-NEON_API(void) ne_ssl_set_clicert(ne_session *sess, const ne_ssl_client_cert *clicert);
+NE_API void ne_ssl_set_clicert(ne_session *sess, const ne_ssl_client_cert *clicert);
 
 /* Indicate that the certificate 'cert' is trusted; the 'cert' object
  * is duplicated internally so can be destroyed by the caller.  This
  * function has no effect for non-SSL sessions. */
-NEON_API(void) ne_ssl_trust_cert(ne_session *sess, const ne_ssl_certificate *cert);
+NE_API void ne_ssl_trust_cert(ne_session *sess, const ne_ssl_certificate *cert);
 
 /* If the SSL library provided a default set of CA certificates, trust
  * this set of CAs. */
-NEON_API(void) ne_ssl_trust_default_ca(ne_session *sess);
+NE_API void ne_ssl_trust_default_ca(ne_session *sess);
 
 /* Callback used to load a client certificate on demand.  If dncount
  * is > 0, the 'dnames' array dnames[0] through dnames[dncount-1]
@@ -295,16 +295,16 @@ typedef void (*ne_ssl_provide_fn)(void *userdata, ne_session *sess,
 
 /* Register a function to be called when the server requests a client
  * certificate. */
-NEON_API(void) ne_ssl_provide_clicert(ne_session *sess, 
-                                      ne_ssl_provide_fn fn, void *userdata);
+NE_API void ne_ssl_provide_clicert(ne_session *sess, 
+                                   ne_ssl_provide_fn fn, void *userdata);
 
 /* Set the timeout (in seconds) used when reading from a socket.  The
  * timeout value must be greater than zero. */
-NEON_API(void) ne_set_read_timeout(ne_session *sess, int timeout);
+NE_API void ne_set_read_timeout(ne_session *sess, int timeout);
 
 /* Set the timeout (in seconds) used when making a connection.  The
  * timeout value must be greater than zero. */
-NEON_API(void) ne_set_connect_timeout(ne_session *sess, int timeout);
+NE_API void ne_set_connect_timeout(ne_session *sess, int timeout);
 
 /* Sets the user-agent string. neon/VERSION will be appended, to make
  * the full header "User-Agent: product neon/VERSION".
@@ -313,25 +313,25 @@ NEON_API(void) ne_set_connect_timeout(ne_session *sess, int timeout);
  *       product         = token ["/" product-version]
  *       product-version = token
  * where token is an alphanumeric string. */
-NEON_API(void) ne_set_useragent(ne_session *sess, const char *product);
+NE_API void ne_set_useragent(ne_session *sess, const char *product);
 
 /* Returns non-zero if next-hop server does not claim compliance to
  * HTTP/1.1 or later. */
-NEON_API(int) ne_version_pre_http11(ne_session *sess);
+NE_API int ne_version_pre_http11(ne_session *sess);
 
 /* Returns the 'hostport' URI segment for the end-server, e.g.
  * "my.server.com:8080". */
-NEON_API(const char *) ne_get_server_hostport(ne_session *sess);
+NE_API const char * ne_get_server_hostport(ne_session *sess);
 
 /* Returns the URL scheme being used for the current session, omitting
  * the trailing ':'; e.g. "http" or "https". */
-NEON_API(const char *) ne_get_scheme(ne_session *sess);
+NE_API const char * ne_get_scheme(ne_session *sess);
 
 /* Sets the host, scheme, and port fields of the given URI structure
  * to that of the configured server and scheme for the session; host
  * and scheme are malloc-allocated.  No other fields in the URI
  * structure are changed. */
-NEON_API(void) ne_fill_server_uri(ne_session *sess, ne_uri *uri);
+NE_API void ne_fill_server_uri(ne_session *sess, ne_uri *uri);
 
 /* If a proxy is configured, sets the host and port fields in the
  * given URI structure to that of the proxy.  If multiple proxies are
@@ -339,15 +339,15 @@ NEON_API(void) ne_fill_server_uri(ne_session *sess, ne_uri *uri);
  * hostname is malloc-allocated.  No other fields in the URI structure
  * are changed; if no proxy is configured or a non-HTTP proxy is in
  * use, no fields are changed. */
-NEON_API(void) ne_fill_proxy_uri(ne_session *sess, ne_uri *uri);
+NE_API void ne_fill_proxy_uri(ne_session *sess, ne_uri *uri);
 
 /* Set the error string for the session; takes printf-like format
  * string. */
-NEON_API(void) ne_set_error(ne_session *sess, const char *format, ...)
+NE_API void ne_set_error(ne_session *sess, const char *format, ...)
     ne_attribute((format (printf, 2, 3)));
 
 /* Retrieve the error string for the session */
-NEON_API(const char *) ne_get_error(ne_session *sess);
+NE_API const char * ne_get_error(ne_session *sess);
 
 NE_END_DECLS
 

@@ -4,13 +4,14 @@
     <Import Project="win-build.props" />
     <Import Project="zlib.props" />
     <Import Project="openssl1_1.props" />
+    <Import Project="expat.props" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup />
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
-      <AdditionalIncludeDirectories>..\..\win32;$(OPENSSL_INC_DIR);$(ZLIB_INC_DIR);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>HAVE_CONFIG_H;HAVE_OPENSSL;NEON_DLL;NE_HAVE_SSL;NE_HAVE_ZLIB;USE_GETADDRINFO;WIN32_LEAN_AND_MEAN;NOUSER;NOGDI;NONLS;NOCRYPT;_CRT_SECURE_NO_DEPRECATE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>..\..\win32;$(EXPAT_INC_DIR);$(OPENSSL_INC_DIR);$(ZLIB_INC_DIR);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>HAVE_CONFIG_H;HAVE_OPENSSL;BUILDING_NEON;NE_HAVE_SSL;NE_HAVE_DAV;NE_HAVE_ZLIB;HAVE_EXPAT;XML_STATIC;USE_GETADDRINFO;WIN32_LEAN_AND_MEAN;NOUSER;NOGDI;NONLS;NOCRYPT;_CRT_SECURE_NO_DEPRECATE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
@@ -25,8 +26,8 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
-      <AdditionalIncludeDirectories>..\..\win32;$(OPENSSL_INC_DIR);$(ZLIB_INC_DIR);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>HAVE_CONFIG_H;HAVE_OPENSSL;NEON_DLL;NE_HAVE_SSL;NE_HAVE_ZLIB;USE_GETADDRINFO;WIN32_LEAN_AND_MEAN;NOUSER;NOGDI;NONLS;NOCRYPT;_CRT_SECURE_NO_DEPRECATE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>..\..\win32;$(EXPAT_INC_DIR);$(OPENSSL_INC_DIR);$(ZLIB_INC_DIR);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>HAVE_CONFIG_H;HAVE_OPENSSL;BUILDING_NEON;NE_HAVE_SSL;NE_HAVE_DAV;NE_HAVE_ZLIB;HAVE_EXPAT;XML_STATIC;USE_GETADDRINFO;WIN32_LEAN_AND_MEAN;NOUSER;NOGDI;NONLS;NOCRYPT;_CRT_SECURE_NO_DEPRECATE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
@@ -43,8 +44,8 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
-      <AdditionalIncludeDirectories>..\..\win32;$(OPENSSL_INC_DIR);$(ZLIB_INC_DIR);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>HAVE_CONFIG_H;HAVE_OPENSSL;NEON_DLL;NE_HAVE_SSL;NE_HAVE_ZLIB;USE_GETADDRINFO;WIN32_LEAN_AND_MEAN;NOUSER;NOGDI;NONLS;NOCRYPT;_CRT_SECURE_NO_DEPRECATE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>..\..\win32;$(EXPAT_INC_DIR);$(OPENSSL_INC_DIR);$(ZLIB_INC_DIR);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>HAVE_CONFIG_H;HAVE_OPENSSL;BUILDING_NEON;NE_HAVE_SSL;NE_HAVE_DAV;NE_HAVE_ZLIB;HAVE_EXPAT;XML_STATIC;USE_GETADDRINFO;WIN32_LEAN_AND_MEAN;NOUSER;NOGDI;NONLS;NOCRYPT;_CRT_SECURE_NO_DEPRECATE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
@@ -59,8 +60,8 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
-      <AdditionalIncludeDirectories>..\..\win32;$(OPENSSL_INC_DIR);$(ZLIB_INC_DIR);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>HAVE_CONFIG_H;HAVE_OPENSSL;NEON_DLL;NE_HAVE_SSL;NE_HAVE_ZLIB;USE_GETADDRINFO;WIN32_LEAN_AND_MEAN;NOUSER;NOGDI;NONLS;NOCRYPT;_CRT_SECURE_NO_DEPRECATE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>..\..\win32;$(EXPAT_INC_DIR);$(OPENSSL_INC_DIR);$(ZLIB_INC_DIR);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>HAVE_CONFIG_H;HAVE_OPENSSL;BUILDING_NEON;NE_HAVE_SSL;NE_HAVE_DAV;NE_HAVE_ZLIB;HAVE_EXPAT;XML_STATIC;USE_GETADDRINFO;WIN32_LEAN_AND_MEAN;NOUSER;NOGDI;NONLS;NOCRYPT;_CRT_SECURE_NO_DEPRECATE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>

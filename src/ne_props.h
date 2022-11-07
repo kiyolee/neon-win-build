@@ -62,21 +62,21 @@ typedef struct ne_prop_result_set_s ne_prop_result_set;
 /* Get the value of a given property. Will return NULL if there was an
  * error fetching this property on this resource.  Call
  * ne_propset_result to get the response-status if so.  */
-NEON_API(const char *) ne_propset_value(const ne_prop_result_set *set,
-			                const ne_propname *propname);
+NE_API const char * ne_propset_value(const ne_prop_result_set *set,
+                                     const ne_propname *propname);
 
 /* Returns the status structure for fetching the given property on
  * this resource. This function will return NULL if the server did not
  * return the property (which is a server error). */
-NEON_API(const ne_status *) ne_propset_status(const ne_prop_result_set *set,
-				              const ne_propname *propname);
+NE_API const ne_status * ne_propset_status(const ne_prop_result_set *set,
+                                           const ne_propname *propname);
 
 /* Returns the private pointer for the given propset. */
-NEON_API(void *) ne_propset_private(const ne_prop_result_set *set);
+NE_API void * ne_propset_private(const ne_prop_result_set *set);
 
 /* Return language string of property (may be NULL). */
-NEON_API(const char *) ne_propset_lang(const ne_prop_result_set *set,
-			               const ne_propname *pname);
+NE_API const char * ne_propset_lang(const ne_prop_result_set *set,
+                                    const ne_propname *pname);
 
 /* ne_propset_iterate iterates over a properties result set,
  * calling the callback for each property in the set. userdata is
@@ -88,9 +88,9 @@ NEON_API(const char *) ne_propset_lang(const ne_prop_result_set *set,
  * immediately with that value.
  */
 typedef int (*ne_propset_iterator)(void *userdata,
-				   const ne_propname *pname,
-				   const char *value,
-				   const ne_status *status);
+                                   const ne_propname *pname,
+                                   const char *value,
+                                   const ne_status *status);
 
 /* Iterate over all the properties in 'set', calling 'iterator'
  * for each, passing 'userdata' as the first argument to callback.
@@ -98,8 +98,8 @@ typedef int (*ne_propset_iterator)(void *userdata,
  * Returns:
  *   whatever value iterator returns.
  */
-NEON_API(int) ne_propset_iterate(const ne_prop_result_set *set,
-			         ne_propset_iterator iterator, void *userdata);
+NE_API int ne_propset_iterate(const ne_prop_result_set *set,
+                              ne_propset_iterator iterator, void *userdata);
 
 /* Callback for handling the results of fetching properties for a
  * single resource (identified by URI 'uri').  The results are stored
@@ -124,9 +124,9 @@ typedef void (*ne_props_result)(void *userdata, const ne_uri *uri,
  * the request.
  *
  * Returns NE_*.  */
-NEON_API(int) ne_simple_propfind(ne_session *sess, const char *path, int depth,
-			         const ne_propname *props,
-			         ne_props_result results, void *userdata);
+NE_API int ne_simple_propfind(ne_session *sess, const char *path, int depth,
+                              const ne_propname *props,
+                              ne_props_result results, void *userdata);
 
 /* The properties of a resource can be manipulated using ne_proppatch.
  * A single proppatch request may include any number of individual
@@ -152,15 +152,15 @@ typedef struct {
 /* Execute a set of property operations 'ops' on 'path'. 'ops' is an
  * array terminated by an operation with a NULL 'name' field. Returns
  * NE_*. */
-NEON_API(int) ne_proppatch(ne_session *sess, const char *path,
-		           const ne_proppatch_operation *ops);
+NE_API int ne_proppatch(ne_session *sess, const char *path,
+                        const ne_proppatch_operation *ops);
 
 /* Retrieve property names for the resources at 'path'.  'results'
  * callback is called for each resource.  Use 'ne_propset_iterate' on
  * the passed results object to retrieve the list of property names.
  * */
-NEON_API(int) ne_propnames(ne_session *sess, const char *path, int depth,
-		           ne_props_result results, void *userdata);
+NE_API int ne_propnames(ne_session *sess, const char *path, int depth,
+                        ne_props_result results, void *userdata);
 
 /* The complex, you-do-all-the-work, property fetch interface:
  */
@@ -172,18 +172,17 @@ typedef struct ne_propfind_handler_s ne_propfind_handler;
  * given handler, as returned by the ne_props_create_complex callback
  * installed using 'ne_propfind_set_private'.  If this callback was
  * not registered, this function will return NULL.  */
-NEON_API(void *) ne_propfind_current_private(ne_propfind_handler *handler);
+NE_API void * ne_propfind_current_private(ne_propfind_handler *handler);
 
 /* Create a PROPFIND handler, for the given resource or set of 
  * resources.
  *
  * Depth must be one of NE_DEPTH_*. */
-NEON_API(ne_propfind_handler *)
-ne_propfind_create(ne_session *sess, const char *path, int depth);
+NE_API ne_propfind_handler * ne_propfind_create(ne_session *sess, const char *path, int depth);
 
 /* Return the XML parser for the given handler (only need if you want
  * to handle complex properties). */
-NEON_API(ne_xml_parser *) ne_propfind_get_parser(ne_propfind_handler *handler);
+NE_API ne_xml_parser * ne_propfind_get_parser(ne_propfind_handler *handler);
 
 /* This interface reserves the state integer range 'x' where 0 < x
  * and x < NE_PROPS_STATE_TOP. */
@@ -194,7 +193,7 @@ NEON_API(ne_xml_parser *) ne_propfind_get_parser(ne_propfind_handler *handler);
  * needed if for instance, you want to add extra headers to the
  * PROPFIND request).  The result of using the request pointer after
  * ne_propfind_destroy(handler) has been called is undefined. */
-NEON_API(ne_request *) ne_propfind_get_request(ne_propfind_handler *handler);
+NE_API ne_request * ne_propfind_get_request(ne_propfind_handler *handler);
 
 /* A "complex property" has a value which is structured XML. To handle
  * complex properties, you must set up and register an XML handler
@@ -220,16 +219,16 @@ NEON_API(ne_request *) ne_propfind_get_request(ne_propfind_handler *handler);
 typedef void *(*ne_props_create_complex)(void *userdata, const ne_uri *uri);
 typedef void (*ne_props_destroy_complex)(void *userdata, void *complex);
 
-NEON_API(void) ne_propfind_set_private(ne_propfind_handler *handler,
-			               ne_props_create_complex creator,
-			               ne_props_destroy_complex destructor,
-			               void *userdata);
+NE_API void ne_propfind_set_private(ne_propfind_handler *handler,
+                                    ne_props_create_complex creator,
+                                    ne_props_destroy_complex destructor,
+                                    void *userdata);
 
 /* Fetch all properties.
  *
  * Returns NE_*. */
-NEON_API(int) ne_propfind_allprop(ne_propfind_handler *handler, 
-			          ne_props_result result, void *userdata);
+NE_API int ne_propfind_allprop(ne_propfind_handler *handler, 
+                               ne_props_result result, void *userdata);
 
 /* Fetch all properties with names listed in array 'names', which is
  * terminated by a property with a NULL name field.  For each resource
@@ -237,12 +236,12 @@ NEON_API(int) ne_propfind_allprop(ne_propfind_handler *handler,
  * 'userdata' as the first argument.
  *
  * Returns NE_*. */
-NEON_API(int) ne_propfind_named(ne_propfind_handler *handler, 
-		                const ne_propname *names,
-		                ne_props_result result, void *userdata);
+NE_API int ne_propfind_named(ne_propfind_handler *handler, 
+                             const ne_propname *names,
+                             ne_props_result result, void *userdata);
 
 /* Destroy a propfind handler after use. */
-NEON_API(void) ne_propfind_destroy(ne_propfind_handler *handler);
+NE_API void ne_propfind_destroy(ne_propfind_handler *handler);
 
 NE_END_DECLS
 

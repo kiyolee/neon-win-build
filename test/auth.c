@@ -29,7 +29,6 @@
 #include <unistd.h>
 #endif
 
-#include "ne_md5.h"
 #include "ne_string.h"
 #include "ne_request.h"
 #include "ne_auth.h"
@@ -1030,6 +1029,7 @@ static int digest_username_star(void)
         const char *username_raw, *username_star;
     } ts[] = {
         { "Aladdin", NULL },
+        { "aladdin@cave.example.com", NULL },
         { "Ałâddín", "UTF-8''A%c5%82%c3%a2dd%c3%adn" },
         { "Jäsøn Doe", "UTF-8''J%c3%a4s%c3%b8n%20Doe" },
         { "foo bar",  "UTF-8''foo%20bar"},
@@ -1084,26 +1084,30 @@ static int digest_failures(void)
     parms.realm = "WallyWorld";
     parms.nonce = "random-invented-string";
     parms.opaque = NULL;
-    parms.flags = PARM_AINFO;
     parms.num_requests = 1;
 
     for (n = 0; fails[n].message; n++) {
         ne_session *sess;
         int ret;
+        unsigned protocol = NE_AUTH_DIGEST;
 
         parms.failure = fails[n].mode;
+        parms.flags = PARM_AINFO;
+
+        if (parms.failure == fail_req0_2069_stale) protocol |= NE_AUTH_LEGACY_DIGEST;
 
         if (parms.failure == fail_req0_2069_stale || parms.failure == fail_2069_weak)
             parms.flags &= ~PARM_RFC2617;
         else
             parms.flags |= PARM_RFC2617;
 
-        NE_DEBUG(NE_DBG_HTTP, ">>> New Digest failure test, "
-                 "expecting failure '%s'\n", fails[n].message);
+        NE_DEBUG(NE_DBG_HTTP, ">>> New Digest failure test %u, "
+                 "expecting failure '%s', protocol %x\n", n,
+                 fails[n].message, protocol);
         
         CALL(session_server(&sess, serve_digest, &parms));
 
-        ne_set_server_auth(sess, auth_cb, NULL);
+        ne_add_server_auth(sess, protocol, auth_cb, NULL);
         
         ret = any_2xx_request(sess, "/fish");
         ONV(ret == NE_OK,
@@ -1169,7 +1173,7 @@ static int fail_challenge(void)
           "domain=\"http://[::1/\"", "could not parse domain" },
 
         /* Multiple challenge failure cases: */
-        { "Basic, Digest",
+        { "Basic, Digest realm=\"foo\", algorithm=MD5, qop=auth",
           "missing parameter in Digest challenge, missing realm in Basic challenge" },
         
         { "Digest realm=\"foo\", algorithm=MD5, qop=auth, nonce=\"foo\","

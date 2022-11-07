@@ -47,20 +47,13 @@ typedef off64_t ne_off_t;
 typedef off_t ne_off_t;
 #endif
 
-#if defined(WIN32) && defined(NEON_DLL)
-#define NEON_LINKAGE __declspec(dllexport)
-#define NEON_API(rettype) NEON_LINKAGE rettype _cdecl
-#elif defined(WIN32) && defined(NEON_IMPORT)
-#define NEON_LINKAGE __declspec(dllimport)
-#define NEON_API(rettype) NEON_LINKAGE rettype _cdecl
-#else
-#define NEON_LINKAGE /* empty */
-#define NEON_API(rettype) rettype
-#endif
-
 /* define ssize_t for Win32 */
 #if defined(WIN32) && !defined(ssize_t)
+#ifdef _WIN64
+#define ssize_t __int64
+#else
 #define ssize_t int
+#endif
 #endif
 
 #ifdef __NETWARE__
@@ -97,6 +90,21 @@ typedef off_t ne_off_t;
 
 #ifndef NE_BUFSIZ
 #define NE_BUFSIZ 8192
+#endif
+
+#ifndef NE_VAR
+# if defined(_MSC_VER) && defined(NE_DLL)
+#  ifdef BUILDING_NEON
+#   define NE_API __declspec(dllexport)
+#   define NE_VAR extern __declspec(dllexport)
+#  else
+#   define NE_API __declspec(dllimport)
+#   define NE_VAR extern __declspec(dllimport)
+#  endif
+# else
+#  define NE_API
+#  define NE_VAR extern
+# endif
 #endif
 
 #endif /* NE_DEFS_H */

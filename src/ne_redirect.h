@@ -30,12 +30,12 @@ NE_BEGIN_DECLS
  * (30x) response is given for any request in this session, the
  * request will fail with the NE_REDIRECT code, and the destination of
  * the redirect can be retrieved using ne_redirect_location(). */
-NEON_API(void) ne_redirect_register(ne_session *sess);
+NE_API void ne_redirect_register(ne_session *sess);
 
 /* Returns location of last redirect for the session.  Returns NULL if
  * no redirect has been encountered for given session, or the last
  * redirect encountered could not be parsed. */
-NEON_API(const ne_uri *) ne_redirect_location(ne_session *sess);
+NE_API const ne_uri * ne_redirect_location(ne_session *sess);
 
 NE_END_DECLS
 

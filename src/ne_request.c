@@ -53,6 +53,11 @@
 
 #include "ne_private.h"
 
+#if defined(_MSC_VER) && _MSC_VER >= 1600
+#define read(f, b, c) _read(f, b, c)
+#define write(f, b, c) _write(f, b, c)
+#endif
+
 #define SOCK_ERR(req, op, msg) do { ssize_t sret = (op); \
 if (sret < 0) return aborted(req, msg, sret); } while (0)
 
@@ -65,10 +70,6 @@ struct body_reader {
     void *userdata;
     struct body_reader *next;
 };
-
-#if defined(_MSC_VER) && _MSC_VER >= 1400
-#define write _write
-#endif
 
 struct field {
     char *name, *value;

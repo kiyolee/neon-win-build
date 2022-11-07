@@ -48,7 +48,7 @@ NE_BEGIN_DECLS
  * results may be unexpected if other users of neon within the process
  * call ne_i18n_init() with a different encoding parameter.
  */
-NEON_API(void) ne_i18n_init(const char *encoding);
+NE_API void ne_i18n_init(const char *encoding);
 
 NE_END_DECLS
 

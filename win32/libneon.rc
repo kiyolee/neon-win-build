@@ -1,0 +1,36 @@
+#include <winver.h>
+#include "rcVersion.h"
+
+VS_VERSION_INFO		VERSIONINFO
+  FILEVERSION		NEON_MAJOR_VERSION,NEON_MINOR_VERSION,NEON_MICRO_VERSION,0
+  PRODUCTVERSION	NEON_MAJOR_VERSION,NEON_MINOR_VERSION,NEON_MICRO_VERSION,0
+  FILEFLAGSMASK		VS_FFI_FILEFLAGSMASK
+#ifdef _DEBUG
+  FILEFLAGS		VS_FF_DEBUG
+#else
+  FILEFLAGS		0
+#endif
+  FILEOS		VOS__WINDOWS32
+  FILETYPE		VFT_DLL
+  FILESUBTYPE	VFT2_UNKNOWN	// not used
+BEGIN
+  BLOCK "StringFileInfo"
+  BEGIN
+    BLOCK "04090000"  /* Lang = US English, Charset = ASCII */
+    BEGIN
+      VALUE "FileDescription",	"neon library\0"
+      VALUE "FileVersion",	NEON_DOTTED_VERSION "\0"
+      VALUE "InternalName",	"libneon.dll\0"
+      VALUE "LegalCopyright",	"Copyright (C) Joe Orton\0"
+      VALUE "LegalTrademarks",	"\0"
+      VALUE "OriginalFilename",	"libneon.dll\0"
+      VALUE "ProductName",	"neon\0"
+      VALUE "ProductVersion",	NEON_DOTTED_VERSION "\0"
+      VALUE "Comments",		"For more information visit https://github.com/notroj/neon/. Alternative build from https://github.com/kiyolee/neon-win-build/.\0"
+    END
+  END
+  BLOCK "VarFileInfo"
+  BEGIN
+      VALUE "Translation", 0x0409, 0  /* US English, ASCII */
+  END
+END

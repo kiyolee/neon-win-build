@@ -31,17 +31,17 @@
 #define SECURITY_WIN32
 #include <security.h>
 
-NEON_API(int) ne_sspi_init(void);
-NEON_API(int) ne_sspi_deinit(void);
+NE_API int ne_sspi_init(void);
+NE_API int ne_sspi_deinit(void);
 
-NEON_API(int) ne_sspi_create_context(void **context, char * serverName, int ntlm);
+NE_API int ne_sspi_create_context(void **context, char * serverName, int ntlm);
 
-NEON_API(int) ne_sspi_destroy_context(void *context);
+NE_API int ne_sspi_destroy_context(void *context);
 
-NEON_API(int) ne_sspi_clear_context(void *context);
+NE_API int ne_sspi_clear_context(void *context);
 
-NEON_API(int) ne_sspi_authenticate(void *context, const char *base64Token,
-                                   char **responseToken);
+NE_API int ne_sspi_authenticate(void *context, const char *base64Token,
+                                char **responseToken);
 
 #endif /* HAVE_SSPI */
 

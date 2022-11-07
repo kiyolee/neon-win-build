@@ -52,6 +52,10 @@
 #include "ne_internal.h"
 #include "ne_xmlreq.h"
 
+#if defined(_MSC_VER) && _MSC_VER >= 1600
+#define strdup(s) _strdup(s)
+#endif
+
 #define HOOK_ID "http://webdav.org/neon/hooks/webdav-locking"
 
 /* A list of lock objects. */

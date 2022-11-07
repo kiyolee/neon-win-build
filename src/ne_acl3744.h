@@ -77,8 +77,8 @@ typedef struct {
 } ne_acl_entry;
 
 /* Set the ACL for the given resource to the list of ACL entries. */
-int ne_acl3744_set(ne_session *sess, const char *path,
-                   const ne_acl_entry entries[], int numentries);
+NE_API int ne_acl3744_set(ne_session *sess, const char *path,
+                          const ne_acl_entry entries[], int numentries);
 
 NE_END_DECLS
 

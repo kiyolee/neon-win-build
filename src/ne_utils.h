@@ -38,11 +38,11 @@ NE_BEGIN_DECLS
 /* Returns a human-readable library version string describing the
  * version and build information; for example: 
  *    "neon 0.2.0: Library build, OpenSSL support" */
-NEON_API(const char *) ne_version_string(void);
+NE_API const char * ne_version_string(void);
 
 /* Returns non-zero if neon library version is backwards-compatible
  * with ABI at given (major, minor). */
-NEON_API(int) ne_version_match(int major, int minor);
+NE_API int ne_version_match(int major, int minor);
 
 /* Feature codes: */
 #define NE_FEATURE_SSL (1) /* SSL/TLS support */
@@ -56,7 +56,7 @@ NEON_API(int) ne_version_match(int major, int minor);
 
 /* Returns non-zero if library is built with support for the given
  * NE_FEATURE_* feature code 'code'. */
-NEON_API(int) ne_has_support(int feature);
+NE_API int ne_has_support(int feature);
 
 /* Debugging macro to allow code to be optimized out if debugging is
  * disabled at build time. */
@@ -81,16 +81,16 @@ NEON_API(int) ne_has_support(int feature);
 /* Send debugging output to 'stream', for all of the given debug
  * channels.  To disable debugging, pass 'stream' as NULL and 'mask'
  * as 0. */
-NEON_API(void) ne_debug_init(FILE *stream, int mask);
+NE_API void ne_debug_init(FILE *stream, int mask);
 
 /* The current debug mask and stream set by the last call to
  * ne_debug_init. */
-extern NEON_LINKAGE int ne_debug_mask;
-extern NEON_LINKAGE FILE * ne_debug_stream;
+NE_VAR int ne_debug_mask;
+NE_VAR FILE *ne_debug_stream;
 
 /* Produce debug output if any of channels 'ch' is enabled for
  * debugging. */
-NEON_API(void) ne_debug(int ch, const char *, ...) ne_attribute((format(printf, 2, 3)));
+NE_API void ne_debug(int ch, const char *, ...) ne_attribute((format(printf, 2, 3)));
 
 /* Storing an HTTP status result */
 typedef struct {
@@ -109,7 +109,7 @@ typedef struct {
  * free'd by the caller.  Returns 0 on success, in which case all
  * fields of '*s' will be set; or -1 on parse error, in which case
  * '*s' is unmodified. */
-NEON_API(int) ne_parse_statusline(const char *status_line, ne_status *s);
+NE_API int ne_parse_statusline(const char *status_line, ne_status *s);
 
 NE_END_DECLS
 

@@ -57,7 +57,6 @@
 #include <errno.h>
 #include <time.h>
 
-#include "ne_md5.h"
 #include "ne_dates.h"
 #include "ne_request.h"
 #include "ne_auth.h"
@@ -89,34 +88,21 @@
 #define HOOK_SERVER_ID "http://webdav.org/neon/hooks/server-auth"
 #define HOOK_PROXY_ID "http://webdav.org/neon/hooks/proxy-auth"
 
-typedef enum { 
-    auth_alg_md5 = 0,
-    auth_alg_md5_sess,
-    auth_alg_sha256,
-    auth_alg_sha256_sess,
-    auth_alg_sha512_256,
-    auth_alg_sha512_256_sess,
-    auth_alg_unknown
-} auth_algorithm;
+static const struct hashalg {
+    const char *name;
+    unsigned int hash;
+    unsigned int sess; /* _session variant */
+} hashalgs[] = {
+    { "MD5", NE_HASH_MD5, 0 }, /* This must remain first in the array. */
+    { "MD5-sess", NE_HASH_MD5, 1 },
+    { "SHA-256", NE_HASH_SHA256, 0 },
+    { "SHA-256-sess", NE_HASH_SHA256, 1 },
+    { "SHA-512-256", NE_HASH_SHA512_256, 0 },
+    { "SHA-512-256-sess", NE_HASH_SHA512_256, 1 }
+};
 
-static const unsigned int alg_to_hash[] = {
-    NE_HASH_MD5,
-    NE_HASH_MD5,
-    NE_HASH_SHA256,
-    NE_HASH_SHA256,
-    NE_HASH_SHA512_256,
-    NE_HASH_SHA512_256,
-    0
-};
-static const char *const alg_to_name[] = {
-    "MD5",
-    "MD5-sess",
-    "SHA-256",
-    "SHA-256-sess",
-    "SHA-512-256",
-    "SHA-512-256-sess",
-    "(unknown)",
-};
+#define HASHALG_MD5 (&hashalgs[0])
+#define NUM_HASHALGS (sizeof(hashalgs)/sizeof(hashalgs[0]))
 
 /* Selected method of qop which the client is using */
 typedef enum {
@@ -147,7 +133,7 @@ struct auth_challenge {
     unsigned int got_qop; /* we were given a qop directive */
     unsigned int qop_auth; /* "auth" token in qop attrib */
     enum { userhash_none=0, userhash_true=1, userhash_false=2} userhash;
-    auth_algorithm alg;
+    const struct hashalg *alg;
     struct auth_challenge *next;
 };
 
@@ -228,7 +214,7 @@ typedef struct {
     char *userhash;
     char *username_star;
     auth_qop qop;
-    auth_algorithm alg;
+    const struct hashalg *alg;
     unsigned int nonce_count;
     /* The hex representation of the H(A1) value */
     char *h_a1;
@@ -349,8 +335,9 @@ static void clean_session(auth_session *sess)
 /* Returns client nonce string. */
 static char *get_cnonce(void) 
 {
+#ifdef NE_HAVE_SSL
     unsigned char data[32];
-
+#endif
 #ifdef HAVE_GNUTLS
     if (1) {
 #if LIBGNUTLS_VERSION_NUMBER < 0x020b00
@@ -370,23 +357,17 @@ static char *get_cnonce(void)
     {
         /* Fallback sources of random data: all bad, but no good sources
          * are available. */
-        struct ne_md5_ctx *hash;
-        char ret[33];
+        ne_buffer *buf = ne_buffer_create();
+        char *ret;
 
-        hash = ne_md5_create_ctx();
-        
-        /* Uninitialized stack data; yes, happy valgrinders, this is
-         * supposed to be here. */
-        ne_md5_process_bytes(data, sizeof data, hash);
-        
         {
 #ifdef HAVE_GETTIMEOFDAY
             struct timeval tv;
             if (gettimeofday(&tv, NULL) == 0)
-                ne_md5_process_bytes(&tv, sizeof tv, hash);
+                ne_buffer_snprintf(buf, 64, "%" NE_FMT_TIME_T ".%ld",
+                                   tv.tv_sec, (long)tv.tv_usec);
 #else /* HAVE_GETTIMEOFDAY */
-            time_t t = time(NULL);
-            ne_md5_process_bytes(&t, sizeof t, hash);
+            ne_buffer_snprintf(buf, 64, "%" NE_FMT_TIME_T, time(NULL));
 #endif
         }
         {
@@ -395,13 +376,12 @@ static char *get_cnonce(void)
 #else
             pid_t pid = getpid();
 #endif
-            ne_md5_process_bytes(&pid, sizeof pid, hash);
+            ne_buffer_snprintf(buf, 32, "%lu", (unsigned long) pid);
         }
 
-        ne_md5_finish_ascii(hash, ret);
-        ne_md5_destroy_ctx(hash);
-
-        return ne_strdup(ret);
+        ret = ne_strhash(NE_HASH_MD5, buf->data, NULL);
+        ne_buffer_destroy(buf);
+        return ret;
     }
 }
 
@@ -885,11 +865,51 @@ static int ntlm_challenge(auth_session *sess, int attempt,
 }
 #endif /* HAVE_NTLM */
 
+/* Username safety lookup table; "SF" for characters which are safe to
+ * include in 2617-style username parameter values, else "NS" for
+ * non-safe characters.  Determined from RFC7230§3.2.6 - everything in
+ * qdtext EXCEPT obs-text (which is "non-ASCII") is treated as safe to
+ * include in a quoted username. */
+#define SF 0
+#define NS 1
+static const signed char safe_username_table[256] = {
+/* 0xXX    x0      x2      x4      x6      x8      xA      xC      xE     */
+/*   0x */ NS, NS, NS, NS, NS, NS, NS, NS, NS, NS, NS, NS, NS, NS, NS, NS,
+/*   1x */ NS, NS, NS, NS, NS, NS, NS, NS, NS, NS, NS, NS, NS, NS, NS, NS,
+/*   2x */ NS, SF, NS, SF, SF, SF, SF, SF, SF, SF, SF, SF, SF, SF, SF, SF,
+/*   3x */ SF, SF, SF, SF, SF, SF, SF, SF, SF, SF, SF, SF, SF, SF, SF, SF,
+/*   4x */ SF, SF, SF, SF, SF, SF, SF, SF, SF, SF, SF, SF, SF, SF, SF, SF,
+/*   5x */ SF, SF, SF, SF, SF, SF, SF, SF, SF, SF, SF, SF, NS, SF, SF, SF,
+/*   4x */ SF, SF, SF, SF, SF, SF, SF, SF, SF, SF, SF, SF, SF, SF, SF, SF,
+/*   7x */ SF, SF, SF, SF, SF, SF, SF, SF, SF, SF, SF, SF, SF, SF, SF, NS,
+/*   8x */ NS, NS, NS, NS, NS, NS, NS, NS, NS, NS, NS, NS, NS, NS, NS, NS,
+/*   9x */ NS, NS, NS, NS, NS, NS, NS, NS, NS, NS, NS, NS, NS, NS, NS, NS,
+/*   Ax */ NS, NS, NS, NS, NS, NS, NS, NS, NS, NS, NS, NS, NS, NS, NS, NS,
+/*   Bx */ NS, NS, NS, NS, NS, NS, NS, NS, NS, NS, NS, NS, NS, NS, NS, NS,
+/*   Cx */ NS, NS, NS, NS, NS, NS, NS, NS, NS, NS, NS, NS, NS, NS, NS, NS,
+/*   Dx */ NS, NS, NS, NS, NS, NS, NS, NS, NS, NS, NS, NS, NS, NS, NS, NS,
+/*   Ex */ NS, NS, NS, NS, NS, NS, NS, NS, NS, NS, NS, NS, NS, NS, NS, NS,
+/*   Fx */ NS, NS, NS, NS, NS, NS, NS, NS, NS, NS, NS, NS, NS, NS, NS, NS
+};
+#undef NS
+#undef SF
+
+/* Returns non-zero if 'username' is unsafe to use without quoting. */
+static int unsafe_username(const char *username)
+{
+    const char *p;
+    int rv = 0;
+
+    for (p = username; *p; p++)
+        rv |= safe_username_table[(const unsigned char)*p];
+
+    return rv;
+}
+
 /* Returns the H(username:realm:password) used in the Digest H(A1)
  * calculation. */
 static char *get_digest_h_urp(auth_session *sess, ne_buffer **errmsg,
-                              unsigned int hash, int attempt,
-                              struct auth_challenge *parms)
+                              int attempt, struct auth_challenge *parms)
 {
     char password[ABUFSIZE], *h_urp;
 
@@ -901,7 +921,7 @@ static char *get_digest_h_urp(auth_session *sess, ne_buffer **errmsg,
     /* Calculate userhash for this (realm, username) if required.
      * https://tools.ietf.org/html/rfc7616#section-3.4.4 */
     if (parms->userhash == userhash_true) {
-        sess->userhash = ne_strhash(hash, sess->username, ":",
+        sess->userhash = ne_strhash(parms->alg->hash, sess->username, ":",
                                     sess->realm, NULL);
     }
     else {
@@ -911,25 +931,22 @@ static char *get_digest_h_urp(auth_session *sess, ne_buffer **errmsg,
          * caller has indicated the username really is UTF-8; or
          * else b) the challenge is an error since the username
          * cannot be sent safely. */
-        char *esc = ne_strparam("UTF-8", NULL, (unsigned char *)sess->username);
-
-        if (esc) {
+        if (unsafe_username(sess->username)) {
             if (parms->userhash == userhash_none
                 || parms->handler->new_creds == NULL) {
-                ne_free(esc);
                 challenge_error(errmsg, _("could not handle non-ASCII "
                                           "username in Digest challenge"));
                 ne__strzero(password, sizeof password);
                 return NULL;
             }
-            sess->username_star = esc;
-            NE_DEBUG(NE_DBG_HTTPAUTH, "auth: Using username* => %s\n", esc);
+            sess->username_star = ne_strparam("UTF-8", NULL, (unsigned char *)sess->username);
+            NE_DEBUG(NE_DBG_HTTPAUTH, "auth: Using username* => %s\n", sess->username_star);
         }
     }
 
     /* H(A1) calculation identical for 2069 or 2617/7616:
      * https://tools.ietf.org/html/rfc7616#section-3.4.2 */
-    h_urp = ne_strhash(hash, sess->username, ":", sess->realm, ":",
+    h_urp = ne_strhash(parms->alg->hash, sess->username, ":", sess->realm, ":",
                        password, NULL);
     ne__strzero(password, sizeof password);
 
@@ -942,14 +959,23 @@ static int digest_challenge(auth_session *sess, int attempt,
                             struct auth_challenge *parms,
                             const char *uri, ne_buffer **errmsg)
 {
-    unsigned int hash;
     char *p, *h_urp = NULL;
 
-    if (parms->alg == auth_alg_unknown) {
+    /* Handle 2069 legacy Digest case. */
+    if (parms->alg == NULL && !parms->got_qop) {
+        if ((parms->handler->protomask & NE_AUTH_LEGACY_DIGEST) == 0) {
+            challenge_error(errmsg, _("legacy Digest challenge not supported"));
+            return -1;
+        }
+        /* It can only be MD5. */
+        parms->alg = HASHALG_MD5;
+    }
+
+    if (parms->alg == NULL) {
         challenge_error(errmsg, _("unknown algorithm in Digest challenge"));
         return -1;
     }
-    else if (parms->alg == auth_alg_md5_sess && !parms->qop_auth) {
+    else if (parms->alg->sess && !parms->qop_auth) {
         challenge_error(errmsg, _("incompatible algorithm in Digest challenge"));
         return -1;
     }
@@ -968,18 +994,12 @@ static int digest_challenge(auth_session *sess, int attempt,
         challenge_error(errmsg, _("stale Digest challenge with new algorithm or realm"));
         return -1;
     }
-    else if (!parms->got_qop
-             && (parms->handler->protomask & NE_AUTH_LEGACY_DIGEST) == 0) {
-        challenge_error(errmsg, _("legacy Digest challenge not supported"));
-        return -1;
-    }
 
-    hash = alg_to_hash[parms->alg];
-    p = ne_strhash(hash, "", NULL);
+    p = ne_strhash(parms->alg->hash, "", NULL);
     if (p == NULL) {
         challenge_error(errmsg,
                         _("%s algorithm in Digest challenge not supported"),
-                        alg_to_name[parms->alg]);
+                        parms->alg->name);
         return -1;
     }
     ne_free(p);
@@ -1000,7 +1020,7 @@ static int digest_challenge(auth_session *sess, int attempt,
         sess->alg = parms->alg;
         sess->cnonce = get_cnonce();
 
-        h_urp = get_digest_h_urp(sess, errmsg, hash, attempt, parms);
+        h_urp = get_digest_h_urp(sess, errmsg, attempt, parms);
         if (h_urp == NULL) {
             return -1;
         }
@@ -1027,10 +1047,9 @@ static int digest_challenge(auth_session *sess, int attempt,
     }
 
     if (h_urp) {
-        if (sess->alg == auth_alg_md5_sess || sess->alg == auth_alg_sha256_sess
-            || sess->alg == auth_alg_sha512_256_sess) {
-            sess->h_a1 = ne_strhash(hash, h_urp, ":", sess->nonce, ":",
-                                    sess->cnonce, NULL);
+        if (sess->alg->sess) {
+            sess->h_a1 = ne_strhash(parms->alg->hash, h_urp, ":",
+                                    sess->nonce, ":", sess->cnonce, NULL);
             zero_and_free(h_urp);
             NE_DEBUG(NE_DBG_HTTPAUTH, "auth: Session H(A1) is [%s]\n", sess->h_a1);
         }
@@ -1081,7 +1100,7 @@ static char *request_digest(auth_session *sess, struct auth_request *req)
     char nc_value[9] = {0};
     const char *qop_value = "auth"; /* qop-value */
     ne_buffer *ret;
-    unsigned int hash = alg_to_hash[sess->alg];
+    unsigned int hash = sess->alg->hash;
 
     /* Do not submit credentials if an auth domain is defined and this
      * request-uri fails outside it. */
@@ -1123,7 +1142,7 @@ static char *request_digest(auth_session *sess, struct auth_request *req)
 		     "nonce=\"", sess->nonce, "\", "
 		     "uri=\"", req->uri, "\", "
 		     "response=\"", response, "\", "
-		     "algorithm=\"", alg_to_name[sess->alg], "\"", 
+		     "algorithm=\"", sess->alg->name, "\"",
 		     NULL);
     if (sess->username_star) {
         ne_buffer_concat(ret, ", username*=", sess->username_star, NULL);
@@ -1301,7 +1320,7 @@ static int verify_digest_response(struct auth_request *req, auth_session *sess,
      * the response-digest field. */    
     if (qop == auth_qop_auth && ret == NE_OK) {
         char *h_a2, *response;
-        unsigned int hash = alg_to_hash[sess->alg];
+        unsigned int hash = sess->alg->hash;
 
         h_a2 = ne_strhash(hash, ":", req->uri, NULL);
         response = ne_strhash(hash, sess->h_a1, ":", sess->response_rhs,
@@ -1494,27 +1513,15 @@ static int auth_challenge(auth_session *sess, int attempt, const char *uri,
 	    /* Truth value */
 	    chall->stale = (ne_strcasecmp(val, "true") == 0);
 	} else if (ne_strcasecmp(key, "algorithm") == 0) {
-	    if (ne_strcasecmp(val, "md5") == 0) {
-		chall->alg = auth_alg_md5;
-	    }
-            else if (ne_strcasecmp(val, "md5-sess") == 0) {
-		chall->alg = auth_alg_md5_sess;
-	    }
-	    else if (ne_strcasecmp(val, "sha-256") == 0) {
-		chall->alg = auth_alg_sha256;
-	    }
-	    else if (ne_strcasecmp(val, "sha-256-sess") == 0) {
-		chall->alg = auth_alg_sha256_sess;
-	    }
-	    else if (ne_strcasecmp(val, "sha-512-256") == 0) {
-		chall->alg = auth_alg_sha512_256;
-	    }
-	    else if (ne_strcasecmp(val, "sha-512-256-sess") == 0) {
-		chall->alg = auth_alg_sha512_256_sess;
-	    }
-            else {
-		chall->alg = auth_alg_unknown;
-	    }
+            unsigned int n;
+
+            chall->alg = NULL;
+            for (n = 0; n < NUM_HASHALGS; n++) {
+                if (ne_strcasecmp(val, hashalgs[n].name) == 0) {
+                    chall->alg = &hashalgs[n];
+                    break;
+                }
+            }
 	} else if (ne_strcasecmp(key, "qop") == 0) {
             /* iterate over each token in the value */
             do {

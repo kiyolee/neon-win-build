@@ -37,28 +37,28 @@ NE_BEGIN_DECLS
  * character was found.
  * 
  * ne_qtoken will return NULL if unterminated quotes are found. */
-NEON_API(char *) ne_token(char **str, char sep);
-NEON_API(char *) ne_qtoken(char **str, char sep, const char *quotes);
+NE_API char * ne_token(char **str, char sep);
+NE_API char * ne_qtoken(char **str, char sep, const char *quotes);
 
 /* Return portion of 'str' with any characters in 'whitespace' shaved
  * off the beginning and end.  Modifies str in-place. */
-NEON_API(char *) ne_shave(char *str, const char *whitespace);
+NE_API char * ne_shave(char *str, const char *whitespace);
 
 /* Cleanse 'str' of non-printable (e.g. control) characters.  'str' is
  * modified in-place, and returned. */
-NEON_API(char *) ne_strclean(char *str)
+NE_API char * ne_strclean(char *str)
     ne_attribute((nonnull));
 
 /* Encode 'len' bytes of 'text' to base64.  Returns malloc-allocated
  * NUL-terminated buffer which the caller must free(). */
-NEON_API(char *) ne_base64(const unsigned char *text, size_t len)
+NE_API char * ne_base64(const unsigned char *text, size_t len)
     ne_attribute_malloc;
 
 /* Decode NUL-terminated base64-encoded string 'data', placing
  * malloc-allocated raw decoder output in '*out'.  Returns length, or
  * zero on decode error (in which case the content of *out is
  * undefined). */
-NEON_API(size_t) ne_unbase64(const char *data, unsigned char **out);
+NE_API size_t ne_unbase64(const char *data, unsigned char **out);
 
 /* Dynamically-allocated string buffer.  A string buffer which grows
  * dynamically . (Strings are zero-terminated still).  A
@@ -70,11 +70,11 @@ typedef struct {
 } ne_buffer;
 
 /* Create a new string buffer object. */
-NEON_API(ne_buffer *) ne_buffer_create(void);
+NE_API ne_buffer * ne_buffer_create(void);
 
 /* Create a new string buffer object with at least 'size' bytes of
  * allocated space. */
-NEON_API(ne_buffer *) ne_buffer_ncreate(size_t size);
+NE_API ne_buffer * ne_buffer_ncreate(size_t size);
 
 /* Returns size of data in buffer, equiv to strlen(ne_buffer_data(buf)) */
 #define ne_buffer_size(buf) ((buf)->used - 1)
@@ -82,28 +82,28 @@ NEON_API(ne_buffer *) ne_buffer_ncreate(size_t size);
 /* Concatenate all given strings onto the end of the buffer.  The
  * strings must all be NUL-terminated, and MUST be followed by a NULL
  * argument marking the end of the list.  */
-NEON_API(void) ne_buffer_concat(ne_buffer *buf, ...)
+NE_API void ne_buffer_concat(ne_buffer *buf, ...)
     ne_attribute_sentinel;
 
 /* Append a NUL-terminated string 'str' to buf. */
-NEON_API(void) ne_buffer_zappend(ne_buffer *buf, const char *str);
+NE_API void ne_buffer_zappend(ne_buffer *buf, const char *str);
 
 /* Append 'len' bytes of 'data' to buf, where 'data' does not contain
  * a NUL terminator.  (A NUL terminator is appended to buf) */
-NEON_API(void) ne_buffer_append(ne_buffer *buf, const char *data, size_t len);
+NE_API void ne_buffer_append(ne_buffer *buf, const char *data, size_t len);
 
 /* Append 'len' bytes of 'data' to buf.  All non-ASCII bytes, and
  * ASCII control characters, are escaped.  (Note that this includes
  * the NUL byte). */
-NEON_API(void) ne_buffer_qappend(ne_buffer *buf, const unsigned char *data, size_t len);
+NE_API void ne_buffer_qappend(ne_buffer *buf, const unsigned char *data, size_t len);
 
 /* Print a string to the end of the buffer using printf-style format
  * string 'format' and subsqeuent arguments.  At most 'max' characters
  * are appended; the number of characters appended (excluding the NUL
  * terminator) is returned.  Behaviour is undefined if 'max' is passed
  * as zero. */
-NEON_API(size_t) ne_buffer_snprintf(ne_buffer *buf, size_t max, 
-                                    const char *format, ...)
+NE_API size_t ne_buffer_snprintf(ne_buffer *buf, size_t max, 
+                                 const char *format, ...)
     ne_attribute((format(printf, 3, 4)));
 
 /* Append a literal, NUL-terminated constant string 'str' to buffer
@@ -113,28 +113,28 @@ ne_buffer_append((buf), (str), sizeof((str)) - 1)
 
 /* Clear the string buffer 'buf', making it equivalent to the empty
  * string. */
-NEON_API(void) ne_buffer_clear(ne_buffer *buf);
+NE_API void ne_buffer_clear(ne_buffer *buf);
 
 /* Grow the allocated size of string buffer 'buf' to at least 'size'
  * bytes. */
-NEON_API(void) ne_buffer_grow(ne_buffer *buf, size_t size);
+NE_API void ne_buffer_grow(ne_buffer *buf, size_t size);
 
 /* Re-establish the 'used' invariant if the string buffer data field is
  * altered directly. */
-NEON_API(void) ne_buffer_altered(ne_buffer *buf);
+NE_API void ne_buffer_altered(ne_buffer *buf);
 
 /* Destroy the string buffer object 'buf' without deallocating the
  * data string.  The data string must subsequently be freed using
  * ne_free(). */
-NEON_API(char *) ne_buffer_finish(ne_buffer *buf);
+NE_API char * ne_buffer_finish(ne_buffer *buf);
 
 /* Destroy a string buffer object. */
-NEON_API(void) ne_buffer_destroy(ne_buffer *buf);
+NE_API void ne_buffer_destroy(ne_buffer *buf);
 
 /* Thread-safe strerror() wrapper; place system error for errno value
  * 'errnum' in 'buffer', which is of length 'buflen'.  Returns
  * 'buffer'. */
-NEON_API(char *) ne_strerror(int errnum, char *buffer, size_t buflen);
+NE_API char * ne_strerror(int errnum, char *buffer, size_t buflen);
 
 /* ne_strnzcpy copies at most 'n'-1 bytes of 'src' to 'dest', and
  * ensures that 'dest' is subsequently NUL-terminated. */
@@ -144,12 +144,12 @@ strncpy(dest, src, ne__nm1); dest[ne__nm1] = '\0'; } while (0)
 /* Return a malloc-allocated copy of 'data', of length 'len', with all
  * non-ASCII bytes, and ASCII control characters escaped.  (Note that
  * the escaping includes the NUL byte). */
-NEON_API(char *) ne_strnqdup(const unsigned char *data, size_t len)
+NE_API char * ne_strnqdup(const unsigned char *data, size_t len)
     ne_attribute_malloc;
 
 /* Return malloc-allocated concatenation of all NUL-terminated string
  * arguments, up to a terminating NULL pointer. */
-NEON_API(char *) ne_concat(const char *str, ...)
+NE_API char * ne_concat(const char *str, ...)
     ne_attribute_sentinel;
 
 /* Hash algorithms: */
@@ -169,20 +169,20 @@ NEON_API(char *) ne_concat(const char *str, ...)
  * may optionally be combined with the formatting options.  Returns
  * NULL if the hash type is not supported or an internal error
  * occurs. */
-NEON_API(char *) ne_strhash(unsigned int flags, ...)
+NE_API char * ne_strhash(unsigned int flags, ...)
     ne_attribute_sentinel ne_attribute_malloc;
 /* Equivalent of ne_strhash(), taking va_list argument; the behaviour
  * is otherwise identical. */
-NEON_API(char *) ne_vstrhash(unsigned int flags, va_list ap)
+NE_API char * ne_vstrhash(unsigned int flags, va_list ap)
     ne_attribute_malloc;
 
 /* Wrapper for snprintf: always NUL-terminates returned buffer, and
  * returns strlen(str). */
-NEON_API(size_t) ne_snprintf(char *str, size_t size, const char *fmt, ...)
+NE_API size_t ne_snprintf(char *str, size_t size, const char *fmt, ...)
     ne_attribute((format(printf, 3, 4)));
 
 /* Wrapper for vsnprintf. */
-NEON_API(size_t) ne_vsnprintf(char *str, size_t size, const char *fmt, va_list ap)
+NE_API size_t ne_vsnprintf(char *str, size_t size, const char *fmt, va_list ap)
     ne_attribute((format(printf, 3, 0)));
 
 /* Implementations of strcasecmp and strncasecmp which behave as
@@ -190,17 +190,17 @@ NEON_API(size_t) ne_vsnprintf(char *str, size_t size, const char *fmt, va_list a
  * POSIX locale; i.e. ignoring the process locale. */
 
 /* Compares 's1' and 's2', ignoring differences in case. */
-NEON_API(int) ne_strcasecmp(const char *s1, const char *s2);
+NE_API int ne_strcasecmp(const char *s1, const char *s2);
 /* Compares up to 'n' characters of 's1' and 's2', ignoring
  * differences in case. */
-NEON_API(int) ne_strncasecmp(const char *s1, const char *s2, size_t n);
+NE_API int ne_strncasecmp(const char *s1, const char *s2, size_t n);
 
 /* Return lowercase 'c' as in POSIX locale; note difference from ANSI
  * C semantics as both the argument and return value are unsigned
  * char. */
 #define ne_tolower(c) (ne_tolower_array()[(unsigned char)c])
 
-NEON_API(const unsigned char *) ne_tolower_array(void) ne_attribute((const));
+NE_API const unsigned char * ne_tolower_array(void) ne_attribute((const));
 
 /* Convert an ASCII hexadecimal character in the ranges '0'..'9'
  * 'a'..'f' 'A'..'F' to its numeric equivalent. */
@@ -216,8 +216,8 @@ NEON_API(const unsigned char *) ne_tolower_array(void) ne_attribute((const));
  * 'value' needs to be encoded as an extended parameter, or NULL if it
  * can be used as a regular parameter.  The charset must be either
  * "UTF-8" or "ISO-8859-1", but the language value can be NULL. */
-NEON_API(char *) ne_strparam(const char *charset, const char *lang,
-                             const unsigned char *value)
+NE_API char * ne_strparam(const char *charset, const char *lang,
+                          const unsigned char *value)
     ne_attribute((nonnull (1, 3))) ne_attribute_malloc;
 
 NE_END_DECLS

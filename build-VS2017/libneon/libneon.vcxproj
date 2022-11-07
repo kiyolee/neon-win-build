@@ -72,7 +72,7 @@
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>$(OPENSSL_LIB_DIR);$(ZLIB_LIB_DIR);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(EXPAT_LIB_DIR);$(OPENSSL_LIB_DIR);$(ZLIB_LIB_DIR);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -81,7 +81,7 @@
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>$(OPENSSL_LIB_DIR);$(ZLIB_LIB_DIR);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(EXPAT_LIB_DIR);$(OPENSSL_LIB_DIR);$(ZLIB_LIB_DIR);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -92,7 +92,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalLibraryDirectories>$(OPENSSL_LIB_DIR);$(ZLIB_LIB_DIR);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(EXPAT_LIB_DIR);$(OPENSSL_LIB_DIR);$(ZLIB_LIB_DIR);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -103,10 +103,12 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalLibraryDirectories>$(OPENSSL_LIB_DIR);$(ZLIB_LIB_DIR);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(EXPAT_LIB_DIR);$(OPENSSL_LIB_DIR);$(ZLIB_LIB_DIR);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="..\..\src\ne_207.c" />
+    <ClCompile Include="..\..\src\ne_acl3744.c" />
     <ClCompile Include="..\..\src\ne_alloc.c" />
     <ClCompile Include="..\..\src\ne_auth.c" />
     <ClCompile Include="..\..\src\ne_basic.c" />
@@ -114,9 +116,12 @@
     <ClCompile Include="..\..\src\ne_dates.c" />
     <ClCompile Include="..\..\src\ne_dll.c" />
     <ClCompile Include="..\..\src\ne_i18n.c" />
+    <ClCompile Include="..\..\src\ne_locks.c" />
     <ClCompile Include="..\..\src\ne_md5.c" />
+    <ClCompile Include="..\..\src\ne_oldacl.c" />
     <ClCompile Include="..\..\src\ne_openssl.c" />
     <ClCompile Include="..\..\src\ne_pkcs11.c" />
+    <ClCompile Include="..\..\src\ne_props.c" />
     <ClCompile Include="..\..\src\ne_redirect.c" />
     <ClCompile Include="..\..\src\ne_request.c" />
     <ClCompile Include="..\..\src\ne_session.c" />
@@ -126,8 +131,13 @@
     <ClCompile Include="..\..\src\ne_string.c" />
     <ClCompile Include="..\..\src\ne_uri.c" />
     <ClCompile Include="..\..\src\ne_utils.c" />
+    <ClCompile Include="..\..\src\ne_xml.c" />
+    <ClCompile Include="..\..\src\ne_xmlreq.c" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\..\src\ne_207.h" />
+    <ClInclude Include="..\..\src\ne_acl.h" />
+    <ClInclude Include="..\..\src\ne_acl3744.h" />
     <ClInclude Include="..\..\src\ne_alloc.h" />
     <ClInclude Include="..\..\src\ne_auth.h" />
     <ClInclude Include="..\..\src\ne_basic.h" />
@@ -136,10 +146,13 @@
     <ClInclude Include="..\..\src\ne_defs.h" />
     <ClInclude Include="..\..\src\ne_i18n.h" />
     <ClInclude Include="..\..\src\ne_internal.h" />
+    <ClInclude Include="..\..\src\ne_locks.h" />
     <ClInclude Include="..\..\src\ne_md5.h" />
+    <ClInclude Include="..\..\src\ne_ntlm.h" />
     <ClInclude Include="..\..\src\ne_pkcs11.h" />
     <ClInclude Include="..\..\src\ne_private.h" />
     <ClInclude Include="..\..\src\ne_privssl.h" />
+    <ClInclude Include="..\..\src\ne_props.h" />
     <ClInclude Include="..\..\src\ne_redirect.h" />
     <ClInclude Include="..\..\src\ne_request.h" />
     <ClInclude Include="..\..\src\ne_session.h" />
@@ -149,6 +162,11 @@
     <ClInclude Include="..\..\src\ne_string.h" />
     <ClInclude Include="..\..\src\ne_uri.h" />
     <ClInclude Include="..\..\src\ne_utils.h" />
+    <ClInclude Include="..\..\src\ne_xml.h" />
+    <ClInclude Include="..\..\src\ne_xmlreq.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="..\..\win32\libneon.rc" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

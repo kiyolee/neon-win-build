@@ -73,7 +73,7 @@ struct ne_session_s {
     int persisted;
 
     int is_http11; /* >0 if connected server is known to be
-		    * HTTP/1.1 compliant. */
+                    * HTTP/1.1 compliant. */
 
     char *scheme;
 

@@ -48,13 +48,13 @@ NE_BEGIN_DECLS
  * the user gets the username/password wrong), have the callback
  * function use 'attempt' value as the function return value. */
 typedef int (*ne_auth_creds)(void *userdata, const char *realm, int attempt,
-			     char *username, char *password);
+                             char *username, char *password);
 
 /* Set callbacks to provide credentials for server and proxy
  * authentication, using the default set of authentication protocols.
  * userdata is passed as the first argument to the callback. */
-NEON_API(void) ne_set_server_auth(ne_session *sess, ne_auth_creds creds, void *userdata);
-NEON_API(void) ne_set_proxy_auth(ne_session *sess, ne_auth_creds creds, void *userdata);
+NE_API void ne_set_server_auth(ne_session *sess, ne_auth_creds creds, void *userdata);
+NE_API void ne_set_proxy_auth(ne_session *sess, ne_auth_creds creds, void *userdata);
 
 /* As an alternative to using ne_set_server_auth and
  * ne_set_proxy_auth, the following interfaces may be used; these
@@ -144,10 +144,10 @@ NEON_API(void) ne_set_proxy_auth(ne_session *sess, ne_auth_creds creds, void *us
  * ne_add_proxy_auth are used for a given session, the caller must
  * ensure that the order in which those calls are made reflects the
  * precedence of protocols to be used. */
-NEON_API(void) ne_add_server_auth(ne_session *sess, unsigned protocol, 
-                                  ne_auth_creds creds, void *userdata);
-NEON_API(void) ne_add_proxy_auth(ne_session *sess, unsigned protocol, 
-                                 ne_auth_creds creds, void *userdata);
+NE_API void ne_add_server_auth(ne_session *sess, unsigned protocol, 
+                               ne_auth_creds creds, void *userdata);
+NE_API void ne_add_proxy_auth(ne_session *sess, unsigned protocol, 
+                              ne_auth_creds creds, void *userdata);
 
 /* Alternative credentials provider callback, invoked when credentials
  * are required to authenticate the client to either a server or
@@ -183,12 +183,12 @@ typedef int (*ne_auth_provide)(void *userdata, int attempt,
                                unsigned protocol, const char *realm,
                                char *username, char *password, size_t buflen);
 
-NEON_API(void) ne_add_auth(ne_session *sess, unsigned protocol,
-                           ne_auth_provide creds, void *userdata);
+NE_API void ne_add_auth(ne_session *sess, unsigned protocol,
+                        ne_auth_provide creds, void *userdata);
 
 /* Clear any cached authentication credentials for the given
  * session. */
-NEON_API(void) ne_forget_auth(ne_session *sess);
+NE_API void ne_forget_auth(ne_session *sess);
 
 NE_END_DECLS
 

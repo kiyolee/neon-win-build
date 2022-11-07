@@ -14,6 +14,7 @@ src/ChangeLog
 src/Makefile.in
 src/README
 src/memleak.h
+src/mktable.c
 src/ne_207.c
 src/ne_207.h
 src/ne_acl.h
@@ -71,6 +72,7 @@ src/ne_xml.c
 src/ne_xml.h
 src/ne_xmlreq.c
 src/ne_xmlreq.h
+src/neon.def
 src/neon.vers
 test/.gdbinit
 test/COPYING

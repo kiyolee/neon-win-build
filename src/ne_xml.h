@@ -76,30 +76,30 @@ typedef int ne_xml_endelm_cb(void *userdata, int state,
 typedef struct ne_xml_parser_s ne_xml_parser;
 
 /* Create an XML parser. */
-NEON_API(ne_xml_parser *) ne_xml_create(void);
+NE_API ne_xml_parser * ne_xml_create(void);
 
 /* Push a new handler on the stack of parser 'p'. 'cdata' and/or
  * 'endelm' may be NULL; startelm must be non-NULL. */
-NEON_API(void) ne_xml_push_handler(ne_xml_parser *p,
-                                   ne_xml_startelm_cb *startelm, 
-                                   ne_xml_cdata_cb *cdata,
-                                   ne_xml_endelm_cb *endelm,
-                                   void *userdata);
+NE_API void ne_xml_push_handler(ne_xml_parser *p,
+                                ne_xml_startelm_cb *startelm, 
+                                ne_xml_cdata_cb *cdata,
+                                ne_xml_endelm_cb *endelm,
+                                void *userdata);
 
 /* ne_xml_failed returns non-zero if there was an error during
  * parsing, or zero if the parse completed successfully.  The return
  * value is equal to that of the last ne_xml_parse() call for this
  * parser object. */
-NEON_API(int) ne_xml_failed(ne_xml_parser *p);
+NE_API int ne_xml_failed(ne_xml_parser *p);
 
 /* Set error string for parser.  (The string may be truncated
  * internally). */
-NEON_API(void) ne_xml_set_error(ne_xml_parser *p, const char *msg);
+NE_API void ne_xml_set_error(ne_xml_parser *p, const char *msg);
 
 /* Return the error string (and never NULL).  After ne_xml_failed
  * returns >0, this will describe the parse error.  Otherwise it will
  * be a default error string. */
-NEON_API(const char *) ne_xml_get_error(ne_xml_parser *p);
+NE_API const char * ne_xml_get_error(ne_xml_parser *p);
 
 /* Parse the given block of input of length len.  Parser must be
  * called with len=0 to signify the end of the document (for that
@@ -107,24 +107,24 @@ NEON_API(const char *) ne_xml_get_error(ne_xml_parser *p);
  * non-zero on error: for an XML syntax error, a positive number is
  * returned; if parsing is aborted by a caller-supplied callback, that
  * callback's return value is returned. */
-NEON_API(int) ne_xml_parse(ne_xml_parser *p, const char *block, size_t len);
+NE_API int ne_xml_parse(ne_xml_parser *p, const char *block, size_t len);
 
 /* As ne_xml_parse, casting (ne_xml_parser *)userdata internally.
  * (This function can be passed to ne_add_response_body_reader) */
-NEON_API(int) ne_xml_parse_v(void *userdata, const char *block, size_t len);
+NE_API int ne_xml_parse_v(void *userdata, const char *block, size_t len);
 
 /* Return current line of document during parsing or after parsing is
  * complete. */
-NEON_API(int) ne_xml_currentline(ne_xml_parser *p);
+NE_API int ne_xml_currentline(ne_xml_parser *p);
 
 /* From a start_element callback which was passed 'attrs' using given
  * parser, return attribute of given name and namespace.  If nspace is
  * NULL, no namespace resolution is performed.  Note that this call is
  * context-specific; if called outside a start_element callback,
  * behaviour is undefined. */
-NEON_API(const char *) ne_xml_get_attr(ne_xml_parser *parser,
-			               const char **attrs, const char *nspace, 
-			    const char *name);
+NE_API const char * ne_xml_get_attr(ne_xml_parser *parser,
+                                    const char **attrs, const char *nspace, 
+                                    const char *name);
 
 /* From a start_element callback, resolve a given XML Namespace
  * prefix, if defined.  Given a non-NULL prefix, returns the namespace
@@ -133,16 +133,16 @@ NEON_API(const char *) ne_xml_get_attr(ne_xml_parser *parser,
  * prefix, returns the default namespace URI or the empty string if
  * none is defined.  Note that this call is context-specific; if
  * called outside a start_element callback, behaviour is undefined. */
-NEON_API(const char *) ne_xml_resolve_nspace(ne_xml_parser *parser, 
-                                             const char *prefix, size_t length);
+NE_API const char * ne_xml_resolve_nspace(ne_xml_parser *parser, 
+                                          const char *prefix, size_t length);
 
 /* Return the encoding of the document being parsed.  May return NULL
  * if no encoding is defined or if the XML declaration has not yet
  * been parsed. */
-NEON_API(const char *) ne_xml_doc_encoding(const ne_xml_parser *p);
+NE_API const char * ne_xml_doc_encoding(const ne_xml_parser *p);
 
 /* Destroy the parser object. */
-NEON_API(void) ne_xml_destroy(ne_xml_parser *p);
+NE_API void ne_xml_destroy(ne_xml_parser *p);
 
 /* A utility interface for mapping {nspace, name} onto an integer. */
 struct ne_xml_idmap {
@@ -154,8 +154,8 @@ struct ne_xml_idmap {
 #define NE_XML_MAPLEN(map) (sizeof(map) / sizeof(struct ne_xml_idmap))
 
 /* Return the 'id' corresponding to {nspace, name}, or zero. */
-NEON_API(int) ne_xml_mapid(const struct ne_xml_idmap map[], size_t maplen,
-                           const char *nspace, const char *name);
+NE_API int ne_xml_mapid(const struct ne_xml_idmap map[], size_t maplen,
+                        const char *nspace, const char *name);
 
 /* media type, appropriate for adding to a Content-Type header */
 #define NE_XML_MEDIA_TYPE "application/xml"
