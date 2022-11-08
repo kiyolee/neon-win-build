@@ -1,12 +1,12 @@
 aa192e4dfc75ea883e3fda1a0854c9eb  AUTHORS
 3c09f4070505918e62b6d44c817b2910  BUGS
-506e06200f5963802596fb93db4105a1  ChangeLog
+912ee2a1774e233fe191ff583342653b  ChangeLog
 655cdbd913984b427e2ba15d763d447f  INSTALL.win32
-d0dad1f79883648543d815d1dc656d6b  NEWS
+dcb10c395dc558aaae60716a86f2ebc3  NEWS
 9cbd4de9d195e64ad46e76f42f2c3c63  README.neon.md
 be25f088579f56985ecc606c0fef8851  THANKS
 418cd1e5f8098158025beab6ae564325  TODO
-a2a5c66a79588d9fc4d44363ea5b7e8b  config.hw
+415f54161c111919da8618a18143c55a  config.hw
 e3a11594df9dc0bead85615880e5722b  config.hw.in
 04b449dad2228b95db95077662aba133  neon.mak
 f30a9716ef3762e3467a2f62bf790f0a  src/COPYING.LIB
@@ -14,7 +14,7 @@ f30a9716ef3762e3467a2f62bf790f0a  src/COPYING.LIB
 72646702f167c7ddd7e5422bb6680a61  src/Makefile.in
 b1464a4d5fe1fe883cdd516ecd94a74a  src/README
 e36a49fb69113a99e57e1ab3f2b8bd1a  src/memleak.h
-d35471a8e2af364ebfd6a015d4460d6e  src/mktable.c
+ff03358ec28aea660dfca413d022ac8f  src/mktable.c
 9499022d89749443eca0683a30109952  src/ne_207.c
 af4891bbe87fa24b4aad1aa2652c1c05  src/ne_207.h
 e02d04f04c10bea6f220d9d99d9ef3de  src/ne_acl.h
@@ -22,7 +22,7 @@ a807d11a9b7c93b25ddfb75772156a1f  src/ne_acl3744.c
 ab2937ef48883c79d37ddea9cce28e5f  src/ne_acl3744.h
 d06f8127294d4f39dda25ecf5eb6fd4b  src/ne_alloc.c
 4ded43d4b8b44003ebbe4714ffcc6cec  src/ne_alloc.h
-7b5e7f43fa6389852bd84224621ed25b  src/ne_auth.c
+9c6fedeec771db1755a6fcc814abc3b7  src/ne_auth.c
 76ad0d08fef1a7c1f5b04f0e46e5de17  src/ne_auth.h
 491c12be39e5a5339e9f7033d09a6ff3  src/ne_basic.c
 4f645b165cf908e686b3d96df939d682  src/ne_basic.h
@@ -31,7 +31,7 @@ cf0018107b699b08ad7aabc856d7c6a3  src/ne_compress.c
 07927218b1776858363e288ada9ff223  src/ne_dates.c
 fc433c1b4ab449734aa8eff682581f0d  src/ne_dates.h
 ef11cc816626330324c8d1d8bf227da7  src/ne_defs.h
-8b9dbe811fa1323e7c9bf7adc955eb46  src/ne_gnutls.c
+ad3775a33a85e3f680d5d1b43f158d7d  src/ne_gnutls.c
 e0c42dba7c1ac57e2a9022d99bd9f39c  src/ne_i18n.c
 b685fc5cfe4dba9c11715f39d41ffe05  src/ne_i18n.h
 70f10370d138cd5ab2353c523a6e4dc9  src/ne_internal.h
@@ -81,7 +81,7 @@ b5b56306a0ea1bb96078d85e15ea8406  test/Makefile.in
 a6ea667683212305ef93e9ea724c9287  test/README
 c70550a17768f3562fb9c8e1f96b3311  test/STATUS
 0c5bd3ff2512a1e660041bdc3ed969f8  test/acl3744.c
-85b6988cdf77d521c6347b6ff6a1faa6  test/auth.c
+0cd37021a3127310d80b1374dc52fe14  test/auth.c
 9156d66ab02172c047122f24e20ae3c1  test/basic.c
 4374db7562aad0e8f42daf39e044cbd1  test/common/ChangeLog
 db9da62dfd9d10d4744c41df453a1848  test/common/README
