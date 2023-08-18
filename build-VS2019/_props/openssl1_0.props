@@ -2,7 +2,7 @@
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ImportGroup Label="PropertySheets" />
   <PropertyGroup Label="UserMacros">
-    <OPENSSL_LIBS>ssleay32-static.lib;libeay32-static.lib</OPENSSL_LIBS>
+    <OPENSSL_LIBS>libeay32-static.lib;ssleay32-static.lib</OPENSSL_LIBS>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Platform)'=='Win32'" Label="UserMacros">
     <OPENSSL_INC_DIR>..\..\..\openssl1_0-win-build\$(BUILD_VSENV)\$(Configuration)\include\</OPENSSL_INC_DIR>
