@@ -31,7 +31,11 @@
 #endif
 
 #ifdef HAVE_OPENSSL
+#include <openssl/opensslv.h>
+#if OPENSSL_VERSION_NUMBER < 0x30000000L
+#define HAVE_OPENSSL_MD5
 #include <openssl/md5.h>
+#endif
 #endif
 
 #include "ne_md5.h"
@@ -63,7 +67,7 @@ typedef unsigned long md5_uint32;
 /* Structure to save state of computation between the single steps.  */
 struct md5_ctx
 {
-#ifdef HAVE_OPENSSL
+#ifdef HAVE_OPENSSL_MD5
   MD5_CTX ctx;
 #else
   md5_uint32 A;
@@ -77,7 +81,7 @@ struct md5_ctx
 #endif
 };
 
-#ifndef HAVE_OPENSSL
+#ifndef HAVE_OPENSSL_MD5
 /* This array contains the bytes used to pad the buffer to the next
    64-byte boundary.  (RFC 1321, 3.1: Step 1)  */
 static const unsigned char fillbuf[64] = { 0x80, 0 /* , 0, 0, ...  */ };
@@ -368,7 +372,7 @@ md5_process_block (const void *buffer, size_t len, struct md5_ctx *ctx)
   ctx->C = C;
   ctx->D = D;
 }
-#else /* HAVE_OPENSSL */
+#else /* HAVE_OPENSSL_MD5 */
 
 struct ne_md5_ctx *ne_md5_create_ctx(void)
 {
@@ -415,7 +419,7 @@ void ne_md5_destroy_ctx(struct ne_md5_ctx *ctx)
 {
     ne_free(ctx);
 }
-#endif /* HAVE_OPENSSL */
+#endif /* HAVE_OPENSSL_MD5 */
 
 /* Put result from CTX in first 16 bytes following RESBUF.  The result
    must be in little endian byte order.
@@ -425,7 +429,7 @@ void ne_md5_destroy_ctx(struct ne_md5_ctx *ctx)
 void *
 md5_read_ctx (const struct md5_ctx *ctx, void *resbuf)
 {
-#ifdef HAVE_OPENSSL
+#ifdef HAVE_OPENSSL_MD5
 #define SWAP_CTX(x) SWAP(ctx->ctx.x)
 #else
 #define SWAP_CTX(x) SWAP(ctx->x)
