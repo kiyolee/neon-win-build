@@ -1,12 +1,12 @@
 aa192e4dfc75ea883e3fda1a0854c9eb  AUTHORS
 3c09f4070505918e62b6d44c817b2910  BUGS
-912ee2a1774e233fe191ff583342653b  ChangeLog
+943767db18b61d3595dbb7d96f6dd0ec  ChangeLog
 655cdbd913984b427e2ba15d763d447f  INSTALL.win32
-dcb10c395dc558aaae60716a86f2ebc3  NEWS
-9cbd4de9d195e64ad46e76f42f2c3c63  README.neon.md
+0abed2a8ee3d5a47c0a136150c3ef514  NEWS
+37ae963f2f6e993a7b26804a0f855471  README.neon.md
 be25f088579f56985ecc606c0fef8851  THANKS
 418cd1e5f8098158025beab6ae564325  TODO
-415f54161c111919da8618a18143c55a  config.hw
+386d136dffad9be2e03de762b791e170  config.hw
 e3a11594df9dc0bead85615880e5722b  config.hw.in
 04b449dad2228b95db95077662aba133  neon.mak
 f30a9716ef3762e3467a2f62bf790f0a  src/COPYING.LIB
@@ -55,7 +55,7 @@ e587e64fdb55a06e8fbe07d86e05e66d  src/ne_request.c
 0d0beb550f5e3afcf499572bf52c971a  src/ne_request.h
 8426c09b1b72bd02f76bbeedd8ab049e  src/ne_session.c
 4f7ce7ccf150e207138e464516b5fc70  src/ne_session.h
-e622cf0bafa1027dd83575c40df66c09  src/ne_socket.c
+b5c93fc481164121e98bfc6ecf479f92  src/ne_socket.c
 3a2ed5560e4bda211921c6c300c290e8  src/ne_socket.h
 80c8686005492184fdc26e600b894df0  src/ne_socks.c
 a9e02f89cf7e8fe7c2a8a93f9daefbd1  src/ne_ssl.h

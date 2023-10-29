@@ -2,7 +2,7 @@
 
 neon Windows build with Visual Studio.
 
-This version is neon-0.32.4.
+This version is neon-0.32.5.
 
 To build, simply open the required solution file, and
 you know how to use Visual Studio, right?
