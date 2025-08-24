@@ -33,13 +33,16 @@ NE_BEGIN_DECLS
 
 typedef struct ne_session_s ne_session;
 
-/* Create a session to the given server, using the given scheme.  If
- * "https" is passed as the scheme, SSL will be used to connect to the
- * server. */
-NE_API ne_session * ne_session_create(const char *scheme,
-                                      const char *hostname, unsigned int port);
+/* Create a session to the server 'host', using the given scheme.  If
+ * "https" is passed as the scheme, TLS will be used to connect to the
+ * server. The host string must follow the definition of 'host' in RFC
+ * 3986, which can be an IP-literal or registered (DNS) hostname. An
+ * IPv6 literal address must be enclosed in square brackets (for
+ * example "[::1]"). */
+NE_API ne_session *ne_session_create(const char *scheme, const char *host,
+                              unsigned int port);
 
-/* Finish an HTTP session */
+/* Finish an HTTP session, freeing associated memory. */
 NE_API void ne_session_destroy(ne_session *sess);
 
 /* Prematurely force the connection to be closed for the given
@@ -50,7 +53,7 @@ NE_API void ne_close_connection(ne_session *sess);
  * override (remove) any proxy servers previously configured, and must
  * be called before any requests are created using this session. */
 NE_API void ne_session_proxy(ne_session *sess,
-                             const char *hostname, unsigned int port);
+		      const char *hostname, unsigned int port);
 
 /* Configure a SOCKS proxy server which will be used for the session.
  * The SOCKS protocol version 'vers' will be used to contact the
@@ -64,8 +67,8 @@ NE_API void ne_session_proxy(ne_session *sess,
  * configured, and must be called before any requests are created
  * using this session. */
 NE_API void ne_session_socks_proxy(ne_session *sess, enum ne_sock_sversion vers,
-                                   const char *hostname, unsigned int port,
-                                   const char *username, const char *password);
+                            const char *hostname, unsigned int port,
+                            const char *username, const char *password);
 
 /* Configure use of proxy servers from any system-wide default sources
  * which are configured at build time.  This function will override
@@ -130,7 +133,7 @@ NE_API void ne_set_addrlist(ne_session *sess, const ne_inet_addr **addrs, size_t
  * created using this session.  Port number 'port' will be used
  * instead of the "real" session port, to connect to the proxy. */
 NE_API void ne_set_addrlist2(ne_session *sess, unsigned int port, 
-                             const ne_inet_addr **addrs, size_t n);
+                      const ne_inet_addr **addrs, size_t n);
 
 /* Bind connections to the specified local address.  If the address
  * determined for the remote host has a different family (type) to
@@ -157,7 +160,7 @@ NE_API void ne_set_progress(ne_session *sess, ne_progress progress, void *userda
 /* Store an opaque context for the session, 'priv' is returned by a
  * call to ne_session_get_private with the same ID. */
 NE_API void ne_set_session_private(ne_session *sess, const char *id, void *priv);
-NE_API void * ne_get_session_private(ne_session *sess, const char *id);
+NE_API void *ne_get_session_private(ne_session *sess, const char *id);
 
 /* Status event type.  NOTE: More event types may be added in
  * subsequent releases, so callers must ignore unknown status types
@@ -262,7 +265,7 @@ NE_API void ne_set_notifier(ne_session *sess, ne_notify_status status, void *use
  * callback must return zero to accept the certificate: a non-zero
  * return value will fail the SSL negotiation. */
 typedef int (*ne_ssl_verify_fn)(void *userdata, int failures,
-                                const ne_ssl_certificate *cert);
+				const ne_ssl_certificate *cert);
 
 /* Install a callback to handle server certificate verification.  This
  * is required when the CA certificate is not known for the server
@@ -281,7 +284,8 @@ NE_API void ne_ssl_set_clicert(ne_session *sess, const ne_ssl_client_cert *clice
 NE_API void ne_ssl_trust_cert(ne_session *sess, const ne_ssl_certificate *cert);
 
 /* If the SSL library provided a default set of CA certificates, trust
- * this set of CAs. */
+ * this set of CAs. This function has no effect for non-SSL
+ * sessions. */
 NE_API void ne_ssl_trust_default_ca(ne_session *sess);
 
 /* Callback used to load a client certificate on demand.  If dncount
@@ -290,13 +294,13 @@ NE_API void ne_ssl_trust_default_ca(ne_session *sess);
  * acceptable.  The callback should load an appropriate client
  * certificate and then pass it to 'ne_ssl_set_clicert'. */
 typedef void (*ne_ssl_provide_fn)(void *userdata, ne_session *sess,
-                                  const ne_ssl_dname *const *dnames,
+				  const ne_ssl_dname *const *dnames,
                                   int dncount);
 
 /* Register a function to be called when the server requests a client
  * certificate. */
 NE_API void ne_ssl_provide_clicert(ne_session *sess, 
-                                   ne_ssl_provide_fn fn, void *userdata);
+                            ne_ssl_provide_fn fn, void *userdata);
 
 /* Set the timeout (in seconds) used when reading from a socket.  The
  * timeout value must be greater than zero. */
@@ -321,11 +325,11 @@ NE_API int ne_version_pre_http11(ne_session *sess);
 
 /* Returns the 'hostport' URI segment for the end-server, e.g.
  * "my.server.com:8080". */
-NE_API const char * ne_get_server_hostport(ne_session *sess);
+NE_API const char *ne_get_server_hostport(ne_session *sess);
 
 /* Returns the URL scheme being used for the current session, omitting
  * the trailing ':'; e.g. "http" or "https". */
-NE_API const char * ne_get_scheme(ne_session *sess);
+NE_API const char *ne_get_scheme(ne_session *sess);
 
 /* Sets the host, scheme, and port fields of the given URI structure
  * to that of the configured server and scheme for the session; host
@@ -347,7 +351,7 @@ NE_API void ne_set_error(ne_session *sess, const char *format, ...)
     ne_attribute((format (printf, 2, 3)));
 
 /* Retrieve the error string for the session */
-NE_API const char * ne_get_error(ne_session *sess);
+NE_API const char *ne_get_error(ne_session *sess);
 
 NE_END_DECLS
 

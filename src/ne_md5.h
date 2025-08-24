@@ -39,21 +39,21 @@ struct ne_md5_ctx;
 /* Create structure containing state of computation.  Can return NULL
  * if the MD5 algorithm is prohibited (such as FIPS-enabled
  * systems). */
-extern NE_API struct ne_md5_ctx * ne_md5_create_ctx(void);
+extern NE_API struct ne_md5_ctx *ne_md5_create_ctx(void);
 
 /* Starting with the result of former calls of this function (or the
    initialization function update the context for the next LEN bytes
    starting at BUFFER.
    It is necessary that LEN is a multiple of 64!!! */
 extern NE_API void ne_md5_process_block(const void *buffer, size_t len,
-                                        struct ne_md5_ctx *ctx);
+                                 struct ne_md5_ctx *ctx);
 
 /* Starting with the result of former calls of this function (or the
    initialization function update the context for the next LEN bytes
    starting at BUFFER.
    It is NOT required that LEN is a multiple of 64.  */
 extern NE_API void ne_md5_process_bytes(const void *buffer, size_t len,
-                                        struct ne_md5_ctx *ctx);
+                                 struct ne_md5_ctx *ctx);
 
 /* Process the remaining bytes in the buffer and put result from CTX
    in first 16 bytes following RESBUF.  The result is always in little
@@ -62,7 +62,7 @@ extern NE_API void ne_md5_process_bytes(const void *buffer, size_t len,
 
    IMPORTANT: On some systems it is required that RESBUF is correctly
    aligned for a 32 bits value.  */
-extern NE_API void * ne_md5_finish_ctx(struct ne_md5_ctx *ctx, void *resbuf);
+extern NE_API void *ne_md5_finish_ctx(struct ne_md5_ctx *ctx, void *resbuf);
 
 
 /* Put result from CTX in first 16 bytes following RESBUF.  The result is
@@ -71,10 +71,10 @@ extern NE_API void * ne_md5_finish_ctx(struct ne_md5_ctx *ctx, void *resbuf);
 
    IMPORTANT: On some systems it is required that RESBUF is correctly
    aligned for a 32 bits value.  */
-extern NE_API void * ne_md5_read_ctx(const struct ne_md5_ctx *ctx, void *resbuf);
+extern NE_API void *ne_md5_read_ctx(const struct ne_md5_ctx *ctx, void *resbuf);
 
 /* Take a copy of the state structure. */
-extern NE_API struct ne_md5_ctx * ne_md5_dup_ctx(struct ne_md5_ctx *ctx);
+extern NE_API struct ne_md5_ctx *ne_md5_dup_ctx(struct ne_md5_ctx *ctx);
 
 /* Re-initialize the context structure. */
 extern NE_API void ne_md5_reset_ctx(struct ne_md5_ctx *ctx);
@@ -91,7 +91,7 @@ extern NE_API int ne_md5_stream(FILE *stream, void *resblock);
    representation of the resulting message digest from CTX in the
    first 33 bytes of BUFFER, including a trailing NUL terminator
    byte.  Returns pointer to buffer. */
-NE_API char * ne_md5_finish_ascii(struct ne_md5_ctx *ctx, char buffer[33]);
+NE_API char *ne_md5_finish_ascii(struct ne_md5_ctx *ctx, char buffer[33]);
 
 /* MD5 ascii->binary conversion */
 NE_API void ne_md5_to_ascii(const unsigned char md5_buf[16], char *buffer);

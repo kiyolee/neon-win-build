@@ -19,9 +19,6 @@
 
 */
 
-#ifndef NE_DEFS_H
-#define NE_DEFS_H
-
 #undef NE_BEGIN_DECLS
 #undef NE_END_DECLS
 #ifdef __cplusplus
@@ -31,6 +28,9 @@
 # define NE_BEGIN_DECLS /* empty */
 # define NE_END_DECLS /* empty */
 #endif
+
+#ifndef NE_DEFS_H
+#define NE_DEFS_H
 
 #include <sys/types.h>
 

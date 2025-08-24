@@ -48,7 +48,7 @@ NE_BEGIN_DECLS
  * the user gets the username/password wrong), have the callback
  * function use 'attempt' value as the function return value. */
 typedef int (*ne_auth_creds)(void *userdata, const char *realm, int attempt,
-                             char *username, char *password);
+			     char *username, char *password);
 
 /* Set callbacks to provide credentials for server and proxy
  * authentication, using the default set of authentication protocols.
@@ -145,9 +145,9 @@ NE_API void ne_set_proxy_auth(ne_session *sess, ne_auth_creds creds, void *userd
  * ensure that the order in which those calls are made reflects the
  * precedence of protocols to be used. */
 NE_API void ne_add_server_auth(ne_session *sess, unsigned protocol, 
-                               ne_auth_creds creds, void *userdata);
+                        ne_auth_creds creds, void *userdata);
 NE_API void ne_add_proxy_auth(ne_session *sess, unsigned protocol, 
-                              ne_auth_creds creds, void *userdata);
+                       ne_auth_creds creds, void *userdata);
 
 /* Alternative credentials provider callback, invoked when credentials
  * are required to authenticate the client to either a server or
@@ -184,7 +184,7 @@ typedef int (*ne_auth_provide)(void *userdata, int attempt,
                                char *username, char *password, size_t buflen);
 
 NE_API void ne_add_auth(ne_session *sess, unsigned protocol,
-                        ne_auth_provide creds, void *userdata);
+                 ne_auth_provide creds, void *userdata);
 
 /* Clear any cached authentication credentials for the given
  * session. */

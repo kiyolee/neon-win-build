@@ -58,14 +58,14 @@ struct ne_lock {
 /* Create a depth zero, exclusive write lock, with default timeout
  * (allowing a server to pick a default).  token, owner and uri are
  * unset. */
-NE_API struct ne_lock * ne_lock_create(void);
+NE_API struct ne_lock *ne_lock_create(void);
 
 /* HINT: to initialize uri host/port/scheme for the lock's URI, use
  * ne_fill_server_uri from ne_session.h. */
 
 /* Deep-copy a lock structure: strdup's any of path, token, owner,
  * hostport which are set. */
-NE_API struct ne_lock * ne_lock_copy(const struct ne_lock *lock);
+NE_API struct ne_lock *ne_lock_copy(const struct ne_lock *lock);
 
 /* Free a lock structure; free's any of any of the URI, token and
  * owner which are set, but not the lock object itself. */
@@ -79,7 +79,7 @@ NE_API void ne_lock_destroy(struct ne_lock *lock);
 typedef struct ne_lock_store_s ne_lock_store;
 
 /* Create a lock store. */
-NE_API ne_lock_store * ne_lockstore_create(void);
+NE_API ne_lock_store *ne_lockstore_create(void);
 
 /* Register the lock store 'store' with the HTTP session 'sess': any
  * operations made using 'sess' which operate on a locked resource,
@@ -103,19 +103,19 @@ NE_API void ne_lockstore_remove(ne_lock_store *store, struct ne_lock *lock);
 
 /* Returns the first lock in the lock store, or NULL if the store is
  * empty. */
-NE_API struct ne_lock * ne_lockstore_first(ne_lock_store *store);
+NE_API struct ne_lock *ne_lockstore_first(ne_lock_store *store);
 
 /* After ne_lockstore_first has been called; returns the next lock in
  * the lock store, or NULL if there are no more locks stored.
  * Behaviour is undefined if ne_lockstore_first has not been called on
  * 'store' since the store was created, or the last time this function
  * returned NULL for the store.. */
-NE_API struct ne_lock * ne_lockstore_next(ne_lock_store *store);
+NE_API struct ne_lock *ne_lockstore_next(ne_lock_store *store);
 
 /* Find a lock in the store for the given server, and with the given
  * path. */
-NE_API struct ne_lock * ne_lockstore_findbyuri(ne_lock_store *store, 
-                                               const ne_uri *uri);
+NE_API struct ne_lock *ne_lockstore_findbyuri(ne_lock_store *store, 
+				       const ne_uri *uri);
 
 /* Issue a LOCK request for the given lock.  Requires that the uri,
  * depth, type, scope, and timeout members of 'lock' are filled in.
@@ -136,17 +136,19 @@ NE_API int ne_lock_refresh(ne_session *sess, struct ne_lock *lock);
 
 /* Callback for lock discovery.  If 'lock' is NULL, something went
  * wrong performing lockdiscovery for the resource, look at 'status'
- * for the details.
+ * for the details. 'uri' is the URI against which lock discovery is
+ * being performed, which may be different from the URI of a
+ * discovered lock (lock->uri).
  * 
  * If lock is non-NULL, at least lock->uri and lock->token will be
  * filled in; and status will be NULL. */
 typedef void (*ne_lock_result)(void *userdata, const struct ne_lock *lock, 
-                               const ne_uri *uri, const ne_status *status);
+			       const ne_uri *uri, const ne_status *status);
 
 /* Perform lock discovery on the given path.  'result' is called with
  * the results (possibly >1 times).  */
 NE_API int ne_lock_discover(ne_session *sess, const char *path,
-                            ne_lock_result result, void *userdata);
+		     ne_lock_result result, void *userdata);
 
 /* The ne_lock_using_* functions should be used before dispatching a
  * request which modify resources.  If a lock store has been

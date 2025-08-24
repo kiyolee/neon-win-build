@@ -36,6 +36,11 @@ NE_API int ne_get(ne_session *sess, const char *path, int fd);
  * body to submit from 'fd'. */
 NE_API int ne_put(ne_session *sess, const char *path, int fd);
 
+/* Perform a PUT request on resource at 'path', including the entity
+ * body 'buf' of length 'buflen'. */
+NE_API int ne_putbuf(ne_session *sess, const char *path,
+              const char *buf, size_t buflen);
+
 #define NE_DEPTH_ZERO (0)
 #define NE_DEPTH_ONE (1)
 #define NE_DEPTH_INFINITE (2)
@@ -53,12 +58,12 @@ NE_API int ne_put(ne_session *sess, const char *path, int fd);
  * NE_DEPTH_INFINITE to request that the collection and its contents
  * are to be copied.  Returns NE_* error code. */
 NE_API int ne_copy(ne_session *sess, int overwrite, int depth,
-                   const char *src, const char *dest);
+	    const char *src, const char *dest);
 
 /* Move resource from 'src' to 'dest' path.  Returns NE_* error
  * code. */
 NE_API int ne_move(ne_session *sess, int overwrite,
-                   const char *src, const char *dest);
+	    const char *src, const char *dest);
 
 /* Delete resource at 'path'.  Returns NE_* error code. */
 NE_API int ne_delete(ne_session *sess, const char *path);
@@ -93,13 +98,13 @@ typedef struct {
     unsigned int dav_class1; /* True if Class 1 WebDAV server */
     unsigned int dav_class2; /* True if Class 2 WebDAV server */
     unsigned int dav_executable; /* True if supports the 'executable'
-                                  * property a. la. mod_dav */
+				  * property a. la. mod_dav */
 } ne_server_capabilities;
 
 /* DEPRECATED: Determines server capabilities (using OPTIONS).  Use
  * ne_options2() instead. */
 NE_API int ne_options(ne_session *sess, const char *path,
-                      ne_server_capabilities *caps);
+               ne_server_capabilities *caps);
 
 #define NE_CAP_DAV_CLASS1    (0x0001) /* Class 1 WebDAV (RFC 2518) */
 #define NE_CAP_DAV_CLASS2    (0x0002) /* Class 2 WebDAV (RFC 2518) */
@@ -146,7 +151,7 @@ typedef struct {
  *      fseek(myfile, resume_from, SEEK_SET);
  *      ne_get_range(sess, path, &range, myfile); */
 NE_API int ne_get_range(ne_session *sess, const char *path, 
-                        ne_content_range *range, int fd);
+		 ne_content_range *range, int fd);
 
 /* Post using buffer as request-body: stream response into f */
 NE_API int ne_post(ne_session *sess, const char *path, int fd, const char *buffer);

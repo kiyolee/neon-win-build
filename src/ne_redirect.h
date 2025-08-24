@@ -35,7 +35,7 @@ NE_API void ne_redirect_register(ne_session *sess);
 /* Returns location of last redirect for the session.  Returns NULL if
  * no redirect has been encountered for given session, or the last
  * redirect encountered could not be parsed. */
-NE_API const ne_uri * ne_redirect_location(ne_session *sess);
+NE_API const ne_uri *ne_redirect_location(ne_session *sess);
 
 NE_END_DECLS
 

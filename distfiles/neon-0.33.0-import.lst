@@ -1,6 +1,6 @@
+.gitignore
 AUTHORS
 BUGS
-ChangeLog
 INSTALL.win32
 NEWS
 README.neon.md
@@ -9,6 +9,7 @@ TODO
 config.hw
 config.hw.in
 neon.mak
+src/.gitignore
 src/COPYING.LIB
 src/ChangeLog
 src/Makefile.in
@@ -75,6 +76,7 @@ src/ne_xmlreq.h
 src/neon.def
 src/neon.vers
 test/.gdbinit
+test/.gitignore
 test/COPYING
 test/ChangeLog
 test/Makefile.in
@@ -116,6 +118,7 @@ test/socket.c
 test/ssl.c
 test/string-tests.c
 test/stubs.c
+test/twooh7.c
 test/uri-tests.c
 test/util-socks.c
 test/util-tests.c

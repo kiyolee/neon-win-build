@@ -38,7 +38,7 @@ NE_BEGIN_DECLS
 /* Returns a human-readable library version string describing the
  * version and build information; for example: 
  *    "neon 0.2.0: Library build, OpenSSL support" */
-NE_API const char * ne_version_string(void);
+NE_API const char *ne_version_string(void);
 
 /* Returns non-zero if neon library version is backwards-compatible
  * with ABI at given (major, minor). */

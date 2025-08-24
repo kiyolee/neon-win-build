@@ -37,21 +37,21 @@ NE_BEGIN_DECLS
  * character was found.
  * 
  * ne_qtoken will return NULL if unterminated quotes are found. */
-NE_API char * ne_token(char **str, char sep);
-NE_API char * ne_qtoken(char **str, char sep, const char *quotes);
+NE_API char *ne_token(char **str, char sep);
+NE_API char *ne_qtoken(char **str, char sep, const char *quotes);
 
 /* Return portion of 'str' with any characters in 'whitespace' shaved
  * off the beginning and end.  Modifies str in-place. */
-NE_API char * ne_shave(char *str, const char *whitespace);
+NE_API char *ne_shave(char *str, const char *whitespace);
 
 /* Cleanse 'str' of non-printable (e.g. control) characters.  'str' is
  * modified in-place, and returned. */
-NE_API char * ne_strclean(char *str)
+NE_API char *ne_strclean(char *str)
     ne_attribute((nonnull));
 
 /* Encode 'len' bytes of 'text' to base64.  Returns malloc-allocated
  * NUL-terminated buffer which the caller must free(). */
-NE_API char * ne_base64(const unsigned char *text, size_t len)
+NE_API char *ne_base64(const unsigned char *text, size_t len)
     ne_attribute_malloc;
 
 /* Decode NUL-terminated base64-encoded string 'data', placing
@@ -70,11 +70,11 @@ typedef struct {
 } ne_buffer;
 
 /* Create a new string buffer object. */
-NE_API ne_buffer * ne_buffer_create(void);
+NE_API ne_buffer *ne_buffer_create(void);
 
 /* Create a new string buffer object with at least 'size' bytes of
  * allocated space. */
-NE_API ne_buffer * ne_buffer_ncreate(size_t size);
+NE_API ne_buffer *ne_buffer_ncreate(size_t size);
 
 /* Returns size of data in buffer, equiv to strlen(ne_buffer_data(buf)) */
 #define ne_buffer_size(buf) ((buf)->used - 1)
@@ -103,7 +103,7 @@ NE_API void ne_buffer_qappend(ne_buffer *buf, const unsigned char *data, size_t 
  * terminator) is returned.  Behaviour is undefined if 'max' is passed
  * as zero. */
 NE_API size_t ne_buffer_snprintf(ne_buffer *buf, size_t max, 
-                                 const char *format, ...)
+                          const char *format, ...)
     ne_attribute((format(printf, 3, 4)));
 
 /* Append a literal, NUL-terminated constant string 'str' to buffer
@@ -126,7 +126,7 @@ NE_API void ne_buffer_altered(ne_buffer *buf);
 /* Destroy the string buffer object 'buf' without deallocating the
  * data string.  The data string must subsequently be freed using
  * ne_free(). */
-NE_API char * ne_buffer_finish(ne_buffer *buf);
+NE_API char *ne_buffer_finish(ne_buffer *buf);
 
 /* Destroy a string buffer object. */
 NE_API void ne_buffer_destroy(ne_buffer *buf);
@@ -134,7 +134,7 @@ NE_API void ne_buffer_destroy(ne_buffer *buf);
 /* Thread-safe strerror() wrapper; place system error for errno value
  * 'errnum' in 'buffer', which is of length 'buflen'.  Returns
  * 'buffer'. */
-NE_API char * ne_strerror(int errnum, char *buffer, size_t buflen);
+NE_API char *ne_strerror(int errnum, char *buffer, size_t buflen);
 
 /* ne_strnzcpy copies at most 'n'-1 bytes of 'src' to 'dest', and
  * ensures that 'dest' is subsequently NUL-terminated. */
@@ -144,12 +144,12 @@ strncpy(dest, src, ne__nm1); dest[ne__nm1] = '\0'; } while (0)
 /* Return a malloc-allocated copy of 'data', of length 'len', with all
  * non-ASCII bytes, and ASCII control characters escaped.  (Note that
  * the escaping includes the NUL byte). */
-NE_API char * ne_strnqdup(const unsigned char *data, size_t len)
+NE_API char *ne_strnqdup(const unsigned char *data, size_t len)
     ne_attribute_malloc;
 
 /* Return malloc-allocated concatenation of all NUL-terminated string
  * arguments, up to a terminating NULL pointer. */
-NE_API char * ne_concat(const char *str, ...)
+NE_API char *ne_concat(const char *str, ...)
     ne_attribute_sentinel;
 
 /* Hash algorithms: */
@@ -169,11 +169,11 @@ NE_API char * ne_concat(const char *str, ...)
  * may optionally be combined with the formatting options.  Returns
  * NULL if the hash type is not supported or an internal error
  * occurs. */
-NE_API char * ne_strhash(unsigned int flags, ...)
+NE_API char *ne_strhash(unsigned int flags, ...)
     ne_attribute_sentinel ne_attribute_malloc;
 /* Equivalent of ne_strhash(), taking va_list argument; the behaviour
  * is otherwise identical. */
-NE_API char * ne_vstrhash(unsigned int flags, va_list ap)
+NE_API char *ne_vstrhash(unsigned int flags, va_list ap)
     ne_attribute_malloc;
 
 /* Wrapper for snprintf: always NUL-terminates returned buffer, and
@@ -200,7 +200,7 @@ NE_API int ne_strncasecmp(const char *s1, const char *s2, size_t n);
  * char. */
 #define ne_tolower(c) (ne_tolower_array()[(unsigned char)c])
 
-NE_API const unsigned char * ne_tolower_array(void) ne_attribute((const));
+NE_API const unsigned char *ne_tolower_array(void) ne_attribute((const));
 
 /* Convert an ASCII hexadecimal character in the ranges '0'..'9'
  * 'a'..'f' 'A'..'F' to its numeric equivalent. */
@@ -216,8 +216,8 @@ NE_API const unsigned char * ne_tolower_array(void) ne_attribute((const));
  * 'value' needs to be encoded as an extended parameter, or NULL if it
  * can be used as a regular parameter.  The charset must be either
  * "UTF-8" or "ISO-8859-1", but the language value can be NULL. */
-NE_API char * ne_strparam(const char *charset, const char *lang,
-                          const unsigned char *value)
+NE_API char *ne_strparam(const char *charset, const char *lang,
+                  const unsigned char *value)
     ne_attribute((nonnull (1, 3))) ne_attribute_malloc;
 
 NE_END_DECLS

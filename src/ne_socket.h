@@ -69,7 +69,7 @@ NE_API void ne_sock_exit(void);
  * may be enclosed in brackets (e.g. `[::1]').  'flags' should be
  * zero, or if NE_ADDR_CANON is passed, the canonical name for the
  * hostname will be determined. */
-NE_API ne_sock_addr * ne_addr_resolve(const char *hostname, int flags);
+NE_API ne_sock_addr *ne_addr_resolve(const char *hostname, int flags);
 
 /* Returns zero if name resolution was successful, non-zero on
  * error. */
@@ -78,11 +78,11 @@ NE_API int ne_addr_result(const ne_sock_addr *addr);
 /* Returns the first network address associated with the 'addr'
  * object.  Undefined behaviour if ne_addr_result returns non-zero for
  * 'addr'; otherwise, never returns NULL.  */
-NE_API const ne_inet_addr * ne_addr_first(ne_sock_addr *addr);
+NE_API const ne_inet_addr *ne_addr_first(ne_sock_addr *addr);
 
 /* Returns the next network address associated with the 'addr' object,
  * or NULL if there are no more. */
-NE_API const ne_inet_addr * ne_addr_next(ne_sock_addr *addr);
+NE_API const ne_inet_addr *ne_addr_next(ne_sock_addr *addr);
 
 /* NB: the pointers returned by ne_addr_first and ne_addr_next are
  * valid until ne_addr_destroy is called for the corresponding
@@ -90,12 +90,12 @@ NE_API const ne_inet_addr * ne_addr_next(ne_sock_addr *addr);
 
 /* If name resolution fails, copies the error string into 'buffer',
  * which is of size 'bufsiz'.  'buffer' is returned. */
-NE_API char * ne_addr_error(const ne_sock_addr *addr, char *buffer, size_t bufsiz);
+NE_API char *ne_addr_error(const ne_sock_addr *addr, char *buffer, size_t bufsiz);
 
 /* Returns the canonical name of the host as a NUL-terminated string,
  * if NE_ADDR_CANON was used, and name resolution was successful.
  * Otherwise, returns NULL. */
-NE_API const char * ne_addr_canonical(const ne_sock_addr *addr);
+NE_API const char *ne_addr_canonical(const ne_sock_addr *addr);
 
 /* Destroys an address object created by ne_addr_resolve. */
 NE_API void ne_addr_destroy(ne_sock_addr *addr);
@@ -110,7 +110,7 @@ typedef enum {
  * network byte order) of given type.  'raw' must be four bytes for an
  * IPv4 address, 16 bytes for an IPv6 address.  May return NULL if
  * address type is not supported. */
-NE_API ne_inet_addr * ne_iaddr_make(ne_iaddr_type type, const unsigned char *raw);
+NE_API ne_inet_addr *ne_iaddr_make(ne_iaddr_type type, const unsigned char *raw);
 
 /* Compare two network address objects i1 and i2; returns zero if they
  * are equivalent or non-zero otherwise.  */
@@ -121,13 +121,13 @@ NE_API ne_iaddr_type ne_iaddr_typeof(const ne_inet_addr *ia);
 
 /* Print the string representation of network address 'ia' into the
  * buffer 'buffer', which is of length 'bufsiz'.  Returns 'buffer'. */
-NE_API char * ne_iaddr_print(const ne_inet_addr *ia, char *buffer, size_t bufsiz);
+NE_API char *ne_iaddr_print(const ne_inet_addr *ia, char *buffer, size_t bufsiz);
 
 /* Dump the raw byte representation (in network byte order) of address
  * 'ia' into the buffer 'buffer', which must be of a suitable length
  * (4 bytes for an IPv4 address, 16 bytes for an IPv6 address).
  * Returns 'buffer'. */
-NE_API unsigned char * ne_iaddr_raw(const ne_inet_addr *ia, unsigned char *buffer);
+NE_API unsigned char *ne_iaddr_raw(const ne_inet_addr *ia, unsigned char *buffer);
 
 /* Perform the reverse name lookup on network address 'ia', placing
  * the returned name in the 'buf' buffer (of length 'bufsiz') if
@@ -137,14 +137,14 @@ NE_API int ne_iaddr_reverse(const ne_inet_addr *ia, char *buf, size_t bufsiz);
 /* Convert network address string 'addr' (for example, "127.0.0.1")
  * into a network address object.  Returns NULL on parse error.  If
  * non-NULL, return value must be freed using ne_iaddr_free. */
-NE_API ne_inet_addr * ne_iaddr_parse(const char *addr, ne_iaddr_type type);
+NE_API ne_inet_addr *ne_iaddr_parse(const char *addr, ne_iaddr_type type);
 
 /* Destroy a network address object created using ne_iaddr_make or
  * ne_iaddr_parse. */
 NE_API void ne_iaddr_free(ne_inet_addr *addr);
 
 /* Create a socket object; returns NULL on error. */
-NE_API ne_socket * ne_sock_create(void);
+NE_API ne_socket *ne_sock_create(void);
 
 /* Specify an address to which the local end of the socket will be
  * bound during a subsequent ne_sock_connect() call.  If the address
@@ -156,14 +156,14 @@ NE_API ne_socket * ne_sock_create(void);
  * (Note: This function is not equivalent to a BSD socket bind(), it
  * only takes effect during the _connect() call). */
 NE_API void ne_sock_prebind(ne_socket *sock, const ne_inet_addr *addr,
-                            unsigned int port);
+                     unsigned int port);
 
 /* Connect the socket to server at address 'addr' on port 'port'.
  * Returns zero on success, NE_SOCK_TIMEOUT if a timeout occurs when a
  * non-zero connect timeout is configured (and is supported), or
  * NE_SOCK_ERROR on failure.  */
 NE_API int ne_sock_connect(ne_socket *sock, const ne_inet_addr *addr, 
-                           unsigned int port);
+                    unsigned int port);
 
 /* Read up to 'count' bytes from socket into 'buffer'.  Returns:
  *   NE_SOCK_* on error,
@@ -203,7 +203,7 @@ struct ne_iovec {
  * greater than zero and smaller than the system-defined maximum
  * vector limit.  Returns 0 on success, or NE_SOCK_* on error. */
 NE_API int ne_sock_fullwritev(ne_socket *sock, const struct ne_iovec *vector,
-                              int count); 
+                       int count); 
 
 /* Read an LF-terminated line into 'buffer', and NUL-terminate it.
  * At most 'len' bytes are read (including the NUL terminator).
@@ -226,7 +226,7 @@ NE_API int ne_sock_fd(const ne_socket *sock);
 
 /* Return address of peer, or NULL on error.  The returned address
  * must be destroyed by caller using ne_iaddr_free. */
-NE_API ne_inet_addr * ne_sock_peer(ne_socket *sock, unsigned int *port);
+NE_API ne_inet_addr *ne_sock_peer(ne_socket *sock, unsigned int *port);
 
 /* Flags for ne_sock_shutdown():  */
 #define NE_SOCK_RECV (1)
@@ -256,7 +256,7 @@ NE_API int ne_sock_shutdown(ne_socket *sock, unsigned int flags);
 NE_API int ne_sock_close(ne_socket *sock);
 
 /* Return current error string for socket. */
-NE_API const char * ne_sock_error(const ne_socket *sock);
+NE_API const char *ne_sock_error(const ne_socket *sock);
 
 /* Set the error string for the socket; takes printf-like format
  * string. */
@@ -282,7 +282,7 @@ NE_API int ne_sock_accept_ssl(ne_socket *sock, ne_ssl_context *ctx);
  * underlying SSL library's socket structure for use in callbacks.
  * Returns zero on success, or non-zero on error. */
 NE_API int ne_sock_connect_ssl(ne_socket *sock, ne_ssl_context *ctx,
-                               void *userdata);
+                        void *userdata);
 
 /* Retrieve the session ID of the current SSL session.  If 'buf' is
  * non-NULL, on success, copies at most *buflen bytes to 'buf' and
@@ -296,7 +296,7 @@ NE_API int ne_sock_sessid(ne_socket *sock, unsigned char *buf, size_t *buflen);
  * fixed or parseable, but is informational only.  Return value is
  * NUL-terminated malloc-allocated string if not NULL, which must be
  * freed by the caller. */
-NE_API char * ne_sock_cipher(ne_socket *sock);
+NE_API char *ne_sock_cipher(ne_socket *sock);
 
 /* SOCKS proxy protocol version: */
 enum ne_sock_sversion {
@@ -325,9 +325,9 @@ enum ne_sock_sversion {
  * by the caller.
  */
 NE_API int ne_sock_proxy(ne_socket *sock, enum ne_sock_sversion vers,
-                         const ne_inet_addr *addr, const char *hostname, 
-                         unsigned int port,
-                         const char *username, const char *password);
+                  const ne_inet_addr *addr, const char *hostname, 
+                  unsigned int port,
+                  const char *username, const char *password);
 
 NE_END_DECLS
 

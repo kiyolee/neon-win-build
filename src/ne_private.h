@@ -46,6 +46,8 @@ struct host_info {
     /* If override is non-NULL, the host is identified by this network
      * address. */
     const ne_inet_addr *network;
+    /* Result of a literal string IP address lookup. */
+    ne_inet_addr *literal;
     struct host_info *next;
 };
 
@@ -73,7 +75,7 @@ struct ne_session_s {
     int persisted;
 
     int is_http11; /* >0 if connected server is known to be
-                    * HTTP/1.1 compliant. */
+		    * HTTP/1.1 compliant. */
 
     char *scheme;
 

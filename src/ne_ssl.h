@@ -38,7 +38,7 @@ typedef struct ne_ssl_dname_s ne_ssl_dname;
  * name, intended to be human-readable (e.g. "Acme Ltd., Norfolk,
  * GB").  Return value is a UTF-8-encoded malloc-allocated string and
  * must be free'd by the caller. */
-NE_API char * ne_ssl_readable_dname(const ne_ssl_dname *dn);
+NE_API char *ne_ssl_readable_dname(const ne_ssl_dname *dn);
 
 /* Returns zero if 'dn1' and 'dn2' refer to same name, or non-zero if
  * they are different. */
@@ -49,7 +49,7 @@ typedef struct ne_ssl_certificate_s ne_ssl_certificate;
 
 /* Read a certificate from a file in PEM format; returns NULL if the
  * certificate could not be parsed. */
-NE_API ne_ssl_certificate * ne_ssl_cert_read(const char *filename);
+NE_API ne_ssl_certificate *ne_ssl_cert_read(const char *filename);
 
 /* Write a certificate to a file in PEM format; returns non-zero if
  * the certificate could not be written. */
@@ -58,31 +58,31 @@ NE_API int ne_ssl_cert_write(const ne_ssl_certificate *cert, const char *filenam
 /* Export a certificate to a base64-encoded, NUL-terminated string.
  * The returned string is malloc-allocated and must be free()d by the
  * caller. */
-NE_API char * ne_ssl_cert_export(const ne_ssl_certificate *cert);
+NE_API char *ne_ssl_cert_export(const ne_ssl_certificate *cert);
 
 /* Import a certificate from a base64-encoded string as returned by
  * ne_ssl_cert_export(). Returns a certificate object or NULL if
  * 'data' was not valid. */
-NE_API ne_ssl_certificate * ne_ssl_cert_import(const char *data);
+NE_API ne_ssl_certificate *ne_ssl_cert_import(const char *data);
 
 /* Returns the identity of the certificate, or NULL if none is given.
  * For a server certificate this will be the hostname of the server to
  * which the cert was issued.  A NUL-terminated UTF-8-encoded string
  * is returned, which is valid for the lifetime of the certificate
  * object. */
-NE_API const char * ne_ssl_cert_identity(const ne_ssl_certificate *cert);
+NE_API const char *ne_ssl_cert_identity(const ne_ssl_certificate *cert);
 
 /* Return the certificate of the entity which signed certificate
  * 'cert'.  Returns NULL if 'cert' is self-signed or the issuer
  * certificate is not available; if non-NULL, the pointer is valid for
  * the lifetime of the certificate object. */
-NE_API const ne_ssl_certificate * ne_ssl_cert_signedby(const ne_ssl_certificate *cert);
+NE_API const ne_ssl_certificate *ne_ssl_cert_signedby(const ne_ssl_certificate *cert);
 
 /* Returns the distinguished name of the certificate issuer. */
-NE_API const ne_ssl_dname * ne_ssl_cert_issuer(const ne_ssl_certificate *cert);
+NE_API const ne_ssl_dname *ne_ssl_cert_issuer(const ne_ssl_certificate *cert);
 
 /* Returns the distinguished name of the certificate subject. */
-NE_API const ne_ssl_dname * ne_ssl_cert_subject(const ne_ssl_certificate *cert);
+NE_API const ne_ssl_dname *ne_ssl_cert_subject(const ne_ssl_certificate *cert);
 
 #define NE_SSL_DIGESTLEN (60)
 
@@ -97,13 +97,13 @@ NE_API int ne_ssl_cert_digest(const ne_ssl_certificate *cert, char *digest);
  * NUL-terminated hex string using the hash algorithm and formatting
  * flags exactly as if flags was passed to ne_strhash().  Returns NULL
  * on error. */
-NE_API char * ne_ssl_cert_hdigest(const ne_ssl_certificate *cert, unsigned int flags);
+NE_API char *ne_ssl_cert_hdigest(const ne_ssl_certificate *cert, unsigned int flags);
 
 /* Copy the validity times for the certificate 'cert' into 'from' and
  * 'until' (either may be NULL).  If the time cannot be represented by
  * a time_t value, then (time_t)-1 will be written. */
 NE_API void ne_ssl_cert_validity_time(const ne_ssl_certificate *cert,
-                                      time_t *from, time_t *until);
+                               time_t *from, time_t *until);
 
 #define NE_SSL_VDATELEN (30)
 /* Copy the validity times into buffers 'from' and 'until' as
@@ -112,12 +112,12 @@ NE_API void ne_ssl_cert_validity_time(const ne_ssl_certificate *cert,
  * names).  The buffers must be at least NE_SSL_VDATELEN bytes in
  * length, and either may be NULL. */
 NE_API void ne_ssl_cert_validity(const ne_ssl_certificate *cert,
-                                 char *from, char *until);
+                          char *from, char *until);
 
 /* Returns zero if 'c1' and 'c2' refer to the same certificate, or
  * non-zero otherwise. */
 NE_API int ne_ssl_cert_cmp(const ne_ssl_certificate *c1,
-                           const ne_ssl_certificate *c2);
+                    const ne_ssl_certificate *c2);
 
 /* Deallocate memory associated with certificate. */
 NE_API void ne_ssl_cert_free(ne_ssl_certificate *cert);
@@ -131,15 +131,15 @@ typedef struct ne_ssl_client_cert_s ne_ssl_client_cert;
  * file 'filename'; returns NULL if the file could not be parsed, or
  * otherwise returning a client certificate object.  The returned
  * object may be in either the encrypted or decrypted state. */
-NE_API ne_ssl_client_cert * ne_ssl_clicert_read(const char *filename);
+NE_API ne_ssl_client_cert *ne_ssl_clicert_read(const char *filename);
 
 /* Read a client certificate (and private key) in PKCS#12 format from
  * 'buffer', of length 'buflen', returning NULL if the certificate
  * could not be parsed, or otherwise returning a client certificate
  * object.  The returned object may be in either the encrypted or
  * decrypted state. */
-NE_API ne_ssl_client_cert * ne_ssl_clicert_import(const unsigned char *buffer, 
-                                                  size_t buflen);
+NE_API ne_ssl_client_cert *ne_ssl_clicert_import(const unsigned char *buffer, 
+                                          size_t buflen);
 
 /* Returns non-zero if client cert is in the encrypted state. */
 NE_API int ne_ssl_clicert_encrypted(const ne_ssl_client_cert *ccert);
@@ -148,7 +148,7 @@ NE_API int ne_ssl_clicert_encrypted(const ne_ssl_client_cert *ccert);
  * none given.  Returns a NUL-terminated, UTF-8-encoded string.  This
  * function may be used on a ccert object in either encrypted or
  * decrypted state. */
-NE_API const char * ne_ssl_clicert_name(const ne_ssl_client_cert *ccert);
+NE_API const char *ne_ssl_clicert_name(const ne_ssl_client_cert *ccert);
 
 /* Decrypt the encrypted client cert using the given password.
  * Returns non-zero on failure, in which case, the ccert object
@@ -160,7 +160,7 @@ NE_API int ne_ssl_clicert_decrypt(ne_ssl_client_cert *ccert, const char *passwor
 /* Return the actual certificate part of the client certificate (never
  * returns NULL).  This function has undefined behaviour for a ccert
  * object which is in the encrypted state. */
-NE_API const ne_ssl_certificate * ne_ssl_clicert_owner(const ne_ssl_client_cert *ccert);
+NE_API const ne_ssl_certificate *ne_ssl_clicert_owner(const ne_ssl_client_cert *ccert);
 
 /* Destroy a client certificate object.  This function may be used on
  * a ccert object in either the encrypted or decrypted state. */
@@ -177,20 +177,20 @@ typedef struct ne_ssl_context_s ne_ssl_context;
 #define NE_SSL_CTX_SERVERv2 (2) /* SSLv2-specific server context */
 
 /* Create an SSL context. */
-NE_API ne_ssl_context * ne_ssl_context_create(int mode);
+NE_API ne_ssl_context *ne_ssl_context_create(int mode);
 
 /* Client mode: trust the given certificate 'cert' in context 'ctx'. */
 NE_API void ne_ssl_context_trustcert(ne_ssl_context *ctx, const ne_ssl_certificate *cert);
 
 /* Server mode: use given cert and key (filenames to PEM certificates). */
 NE_API int ne_ssl_context_keypair(ne_ssl_context *ctx,
-                                  const char *cert, const char *key);
+                           const char *cert, const char *key);
 
 /* Server mode: set client cert verification options: required is non-zero if 
  * a client cert is required, if ca_names is non-NULL it is a filename containing
  * a set of PEM certs from which CA names are sent in the ccert request. */
 NE_API int ne_ssl_context_set_verify(ne_ssl_context *ctx, int required,
-                                     const char *ca_names, const char *verify_cas);
+                              const char *ca_names, const char *verify_cas);
 
 #define NE_SSL_CTX_SSLv2 (0)
 /* Set a flag for the SSL context. */

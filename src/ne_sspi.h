@@ -41,7 +41,7 @@ NE_API int ne_sspi_destroy_context(void *context);
 NE_API int ne_sspi_clear_context(void *context);
 
 NE_API int ne_sspi_authenticate(void *context, const char *base64Token,
-                                char **responseToken);
+                         char **responseToken);
 
 #endif /* HAVE_SSPI */
 

@@ -76,15 +76,15 @@ typedef int ne_xml_endelm_cb(void *userdata, int state,
 typedef struct ne_xml_parser_s ne_xml_parser;
 
 /* Create an XML parser. */
-NE_API ne_xml_parser * ne_xml_create(void);
+NE_API ne_xml_parser *ne_xml_create(void);
 
 /* Push a new handler on the stack of parser 'p'. 'cdata' and/or
  * 'endelm' may be NULL; startelm must be non-NULL. */
 NE_API void ne_xml_push_handler(ne_xml_parser *p,
-                                ne_xml_startelm_cb *startelm, 
-                                ne_xml_cdata_cb *cdata,
-                                ne_xml_endelm_cb *endelm,
-                                void *userdata);
+                         ne_xml_startelm_cb *startelm, 
+                         ne_xml_cdata_cb *cdata,
+                         ne_xml_endelm_cb *endelm,
+                         void *userdata);
 
 /* ne_xml_failed returns non-zero if there was an error during
  * parsing, or zero if the parse completed successfully.  The return
@@ -99,7 +99,7 @@ NE_API void ne_xml_set_error(ne_xml_parser *p, const char *msg);
 /* Return the error string (and never NULL).  After ne_xml_failed
  * returns >0, this will describe the parse error.  Otherwise it will
  * be a default error string. */
-NE_API const char * ne_xml_get_error(ne_xml_parser *p);
+NE_API const char *ne_xml_get_error(ne_xml_parser *p);
 
 /* Parse the given block of input of length len.  Parser must be
  * called with len=0 to signify the end of the document (for that
@@ -122,9 +122,9 @@ NE_API int ne_xml_currentline(ne_xml_parser *p);
  * NULL, no namespace resolution is performed.  Note that this call is
  * context-specific; if called outside a start_element callback,
  * behaviour is undefined. */
-NE_API const char * ne_xml_get_attr(ne_xml_parser *parser,
-                                    const char **attrs, const char *nspace, 
-                                    const char *name);
+NE_API const char *ne_xml_get_attr(ne_xml_parser *parser,
+			    const char **attrs, const char *nspace, 
+			    const char *name);
 
 /* From a start_element callback, resolve a given XML Namespace
  * prefix, if defined.  Given a non-NULL prefix, returns the namespace
@@ -133,13 +133,13 @@ NE_API const char * ne_xml_get_attr(ne_xml_parser *parser,
  * prefix, returns the default namespace URI or the empty string if
  * none is defined.  Note that this call is context-specific; if
  * called outside a start_element callback, behaviour is undefined. */
-NE_API const char * ne_xml_resolve_nspace(ne_xml_parser *parser, 
-                                          const char *prefix, size_t length);
+NE_API const char *ne_xml_resolve_nspace(ne_xml_parser *parser, 
+                                  const char *prefix, size_t length);
 
 /* Return the encoding of the document being parsed.  May return NULL
  * if no encoding is defined or if the XML declaration has not yet
  * been parsed. */
-NE_API const char * ne_xml_doc_encoding(const ne_xml_parser *p);
+NE_API const char *ne_xml_doc_encoding(const ne_xml_parser *p);
 
 /* Destroy the parser object. */
 NE_API void ne_xml_destroy(ne_xml_parser *p);
@@ -155,7 +155,7 @@ struct ne_xml_idmap {
 
 /* Return the 'id' corresponding to {nspace, name}, or zero. */
 NE_API int ne_xml_mapid(const struct ne_xml_idmap map[], size_t maplen,
-                        const char *nspace, const char *name);
+                 const char *nspace, const char *name);
 
 /* media type, appropriate for adding to a Content-Type header */
 #define NE_XML_MEDIA_TYPE "application/xml"

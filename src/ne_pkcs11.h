@@ -38,7 +38,7 @@ typedef struct ne_ssl_pkcs11_provider_s ne_ssl_pkcs11_provider;
  * loaded/initialized, and NE_PK11_NOTIMPL if PKCS#11 is not
  * supported.  On success, *provider is set to non-NULL.  */
 NE_API int ne_ssl_pkcs11_provider_init(ne_ssl_pkcs11_provider **provider,
-                                       const char *name);
+                                const char *name);
 
 /* Initialize a NSS softoken pseudo-PKCS#11 provider of given name
  * (e.g. "softokn3") to supply a client certificate if requested,
@@ -47,10 +47,10 @@ NE_API int ne_ssl_pkcs11_provider_init(ne_ssl_pkcs11_provider **provider,
  * could not be loaded/initialized, and NE_PK11_NOTIMPL if PKCS#11 is
  * not supported.  On success, *provider is set to non-NULL. */
 NE_API int ne_ssl_pkcs11_nss_provider_init(ne_ssl_pkcs11_provider **provider,
-                                           const char *name, const char *directory,
-                                           const char *cert_prefix, 
-                                           const char *key_prefix,
-                                           const char *secmod_db);
+                                    const char *name, const char *directory,
+                                    const char *cert_prefix, 
+                                    const char *key_prefix,
+                                    const char *secmod_db);
 
 /* Destroy a PKCS#11 provider object. */
 NE_API void ne_ssl_pkcs11_provider_destroy(ne_ssl_pkcs11_provider *provider);
@@ -96,14 +96,14 @@ typedef int (*ne_ssl_pkcs11_pin_fn)(void *userdata, int attempt,
  * implement an out-of-band ("protected") authentication path, the PIN
  * entry callback will not be invoked. */
 NE_API void ne_ssl_pkcs11_provider_pin(ne_ssl_pkcs11_provider *provider,
-                                       ne_ssl_pkcs11_pin_fn fn,
-                                       void *userdata);
+                                ne_ssl_pkcs11_pin_fn fn,
+                                void *userdata);
 
 /* Set up a given PKCS#11 provider to supply an appropriate client
  * certificate if requested by the server.  A provider may be
  * configured for use in multiple sessions. */
 NE_API void ne_ssl_set_pkcs11_provider(ne_session *sess,
-                                       ne_ssl_pkcs11_provider *provider);
+                                ne_ssl_pkcs11_provider *provider);
 
 NE_END_DECLS
 
