@@ -2,7 +2,7 @@
 
 neon Windows build with Visual Studio.
 
-This version is neon-0.33.0.
+This version is neon-0.34.2.
 
 To build, simply open the required solution file, and
 you know how to use Visual Studio, right?
@@ -10,7 +10,8 @@ you know how to use Visual Studio, right?
 
 Depends on:
 * zlib-win-build
-* openssl3-win-build
+* openssl3-win-build (VS2013 or later)
+* openssl1_1-win-build (VS2010)  
 * expat-win-build
 
 There are hard references assuming all these sit next to neon-win-build.
@@ -19,7 +20,8 @@ Basically, in a command prompt:
 
 > \> cd {somewhere}\\  
 > \> git clone https://github.com/kiyolee/zlib-win-build.git  
-> \> git clone https://github.com/kiyolee/openssl3-win-build.git  
+> \> git clone https://github.com/kiyolee/openssl3-win-build.git (VS2013 or later)  
+> \> git clone https://github.com/kiyolee/openssl1_1-win-build.git (VS2010)  
 > \> git clone https://github.com/kiyolee/expat-win-build.git  
 > \> git clone https://github.com/kiyolee/neon-win-build.git
 
