@@ -1,6 +1,5 @@
 .gitignore
 AUTHORS
-BUGS
 INSTALL.win32
 NEWS
 README.neon.md

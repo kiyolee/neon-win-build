@@ -32,11 +32,14 @@
 
 #ifdef HAVE_OPENSSL
 #include <openssl/opensslv.h>
-#if OPENSSL_VERSION_NUMBER < 0x30000000L
-#define HAVE_OPENSSL_MD5
 #include <openssl/md5.h>
+
+#if OPENSSL_VERSION_NUMBER >= 0x10101000
+#define HAVE_OPENSSL_EVP 1
+#include <openssl/evp.h>
 #endif
-#endif
+
+#endif /* HAVE_OPENSSL */
 
 #include "ne_md5.h"
 #include "ne_string.h" /* for NE_ASC2HEX */
@@ -67,7 +70,9 @@ typedef unsigned long md5_uint32;
 /* Structure to save state of computation between the single steps.  */
 struct md5_ctx
 {
-#ifdef HAVE_OPENSSL_MD5
+#ifdef HAVE_OPENSSL_EVP
+  EVP_MD_CTX *ctx;
+#elif defined(HAVE_OPENSSL)
   MD5_CTX ctx;
 #else
   md5_uint32 A;
@@ -81,7 +86,7 @@ struct md5_ctx
 #endif
 };
 
-#ifndef HAVE_OPENSSL_MD5
+#ifndef HAVE_OPENSSL
 /* This array contains the bytes used to pad the buffer to the next
    64-byte boundary.  (RFC 1321, 3.1: Step 1)  */
 static const unsigned char fillbuf[64] = { 0x80, 0 /* , 0, 0, ...  */ };
@@ -372,8 +377,75 @@ md5_process_block (const void *buffer, size_t len, struct md5_ctx *ctx)
   ctx->C = C;
   ctx->D = D;
 }
-#else /* HAVE_OPENSSL_MD5 */
+#elif defined(HAVE_OPENSSL_EVP)
 
+struct ne_md5_ctx *ne_md5_create_ctx(void)
+{
+    struct ne_md5_ctx *ret;
+    EVP_MD_CTX *ctx;
+
+    ctx = EVP_MD_CTX_new();
+    if (!ctx) return NULL;
+
+    if (EVP_DigestInit(ctx, EVP_md5()) != 1) {
+        EVP_MD_CTX_free(ctx);
+        return NULL;
+    }
+
+    ret = ne_malloc(sizeof *ret);
+    ret->ctx = ctx;
+    return ret;
+}
+
+void ne_md5_process_block(const void *buffer, size_t len,
+                          struct ne_md5_ctx *ctx)
+{
+    EVP_DigestUpdate(ctx->ctx, buffer, len);
+}
+
+void ne_md5_process_bytes(const void *buffer, size_t len,
+                          struct ne_md5_ctx *ctx)
+{
+    EVP_DigestUpdate(ctx->ctx, buffer, len);
+}
+
+void *ne_md5_finish_ctx(struct ne_md5_ctx *ctx, void *resbuf)
+{
+    unsigned int len = MD5_DIGEST_LENGTH;
+    EVP_DigestFinal(ctx->ctx, resbuf, &len);
+    return resbuf;
+}
+
+struct ne_md5_ctx *ne_md5_dup_ctx(struct ne_md5_ctx *ctx)
+{
+    struct ne_md5_ctx *ret;
+    EVP_MD_CTX *newctx;
+
+    newctx = EVP_MD_CTX_new();
+    if (!newctx) return NULL;
+
+    if (EVP_MD_CTX_copy_ex(newctx, ctx->ctx) != 1) {
+        EVP_MD_CTX_free(newctx);
+        return NULL;
+    }
+
+    ret = ne_malloc(sizeof *ret);
+    ret->ctx = newctx;
+    return ret;
+}
+
+void ne_md5_reset_ctx(struct ne_md5_ctx *ctx)
+{
+    EVP_MD_CTX_reset(ctx->ctx);
+}
+
+void ne_md5_destroy_ctx(struct ne_md5_ctx *ctx)
+{
+    EVP_MD_CTX_free(ctx->ctx);
+    ne_free(ctx);
+}
+
+#else /* OpenSSL < 3.1 */
 struct ne_md5_ctx *ne_md5_create_ctx(void)
 {
     struct ne_md5_ctx *ctx = ne_malloc(sizeof *ctx);
@@ -419,7 +491,7 @@ void ne_md5_destroy_ctx(struct ne_md5_ctx *ctx)
 {
     ne_free(ctx);
 }
-#endif /* HAVE_OPENSSL_MD5 */
+#endif /* HAVE_OPENSSL */
 
 /* Put result from CTX in first 16 bytes following RESBUF.  The result
    must be in little endian byte order.
@@ -429,7 +501,11 @@ void ne_md5_destroy_ctx(struct ne_md5_ctx *ctx)
 void *
 md5_read_ctx (const struct md5_ctx *ctx, void *resbuf)
 {
-#ifdef HAVE_OPENSSL_MD5
+#ifdef HAVE_OPENSSL_EVP
+  return NULL;
+#else
+
+#ifdef HAVE_OPENSSL
 #define SWAP_CTX(x) SWAP(ctx->ctx.x)
 #else
 #define SWAP_CTX(x) SWAP(ctx->x)
@@ -441,6 +517,7 @@ md5_read_ctx (const struct md5_ctx *ctx, void *resbuf)
   ((md5_uint32 *) resbuf)[3] = SWAP_CTX (D);
 
   return resbuf;
+#endif /* !HAVE_OPENSSL_EVP */
 }
 
 
