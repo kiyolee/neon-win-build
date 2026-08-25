@@ -46,6 +46,7 @@
 #include <openssl/rand.h>
 #include <openssl/opensslv.h>
 #include <openssl/evp.h>
+#include <openssl/asn1.h>
 
 #if OPENSSL_VERSION_NUMBER >= 0x10100000L
 #define HAVE_OPENSSL110
@@ -116,7 +117,7 @@ typedef const unsigned char ne_d2i_uchar;
 #endif
 
 struct ne_ssl_dname_s {
-    X509_NAME *dn;
+    const X509_NAME *dn;
 };
 
 struct ne_ssl_certificate_s {
@@ -141,23 +142,23 @@ struct ne_ssl_client_cert_s {
 
 /* Append an ASN.1 DirectoryString STR to buffer BUF as UTF-8.
  * Returns zero on success or non-zero on error. */
-static int append_dirstring(ne_buffer *buf, ASN1_STRING *str)
+static int append_dirstring(ne_buffer *buf, const ASN1_STRING *str)
 {
     unsigned char *tmp = (unsigned char *)""; /* initialize to workaround 0.9.6 bug */
     int len;
 
-    switch (str->type) {
+    switch (ASN1_STRING_type(str)) {
     case V_ASN1_IA5STRING: /* definitely ASCII */
     case V_ASN1_VISIBLESTRING: /* probably ASCII */
     case V_ASN1_PRINTABLESTRING: /* subset of ASCII */
-        ne_buffer_qappend(buf, str->data, str->length);
+        ne_buffer_qappend(buf, ASN1_STRING_get0_data(str), ASN1_STRING_length(str));
         break;
     case V_ASN1_UTF8STRING:
         /* Fail for embedded NUL bytes. */
-        if (strlen((char *)str->data) != (size_t)str->length) {
+        if (strlen((char *)ASN1_STRING_get0_data(str)) != (size_t)ASN1_STRING_length(str)) {
             return -1;
         }
-        ne_buffer_append(buf, (char *)str->data, str->length);
+        ne_buffer_append(buf, (char *)ASN1_STRING_get0_data(str), ASN1_STRING_length(str));
         break;
     case V_ASN1_UNIVERSALSTRING:
     case V_ASN1_T61STRING: /* let OpenSSL convert it as ISO-8859-1 */
@@ -181,7 +182,7 @@ static int append_dirstring(ne_buffer *buf, ASN1_STRING *str)
         break;
     default:
         NE_DEBUG(NE_DBG_SSL, "Could not convert DirectoryString type %d\n",
-                 str->type);
+                 ASN1_STRING_type(str));
         return -1;
     }
     return 0;
@@ -191,7 +192,7 @@ static int append_dirstring(ne_buffer *buf, ASN1_STRING *str)
  * safety. */
 static char *dup_ia5string(const ASN1_IA5STRING *as)
 {
-    return ne_strnqdup(as->data, as->length);
+    return ne_strnqdup(ASN1_STRING_get0_data(as), ASN1_STRING_length(as));
 }
 
 char *ne_ssl_readable_dname(const ne_ssl_dname *name)
@@ -202,8 +203,8 @@ char *ne_ssl_readable_dname(const ne_ssl_dname *name)
 	* const email = OBJ_nid2obj(NID_pkcs9_emailAddress);
 
     for (n = X509_NAME_entry_count(name->dn); n > 0; n--) {
-	X509_NAME_ENTRY *ent = X509_NAME_get_entry(name->dn, n-1);
-	ASN1_OBJECT *obj = X509_NAME_ENTRY_get_object(ent);
+	const X509_NAME_ENTRY *ent = X509_NAME_get_entry(name->dn, n-1);
+	const ASN1_OBJECT *obj = X509_NAME_ENTRY_get_object(ent);
 	
         /* Skip commonName or emailAddress except if there is no other
          * attribute in dname. */
@@ -248,22 +249,22 @@ void ne_ssl_clicert_free(ne_ssl_client_cert *cc)
 static time_t asn1time_to_timet(const ASN1_TIME *atm)
 {
     struct tm tm = {0};
-    int i = atm->length;
+    int i = ASN1_STRING_length(atm);
     
     if (i < 10)
         return (time_t )-1;
 
-    tm.tm_year = FROM_DEC(atm->data);
+    tm.tm_year = FROM_DEC(ASN1_STRING_get0_data(atm));
 
     /* Deal with Year 2000 */
     if (tm.tm_year < 70)
         tm.tm_year += 100;
 
-    tm.tm_mon = FROM_DEC(atm->data + 2) - 1;
-    tm.tm_mday = FROM_DEC(atm->data + 4);
-    tm.tm_hour = FROM_DEC(atm->data + 6);
-    tm.tm_min = FROM_DEC(atm->data + 8);
-    tm.tm_sec = FROM_DEC(atm->data + 10);
+    tm.tm_mon = FROM_DEC(ASN1_STRING_get0_data(atm) + 2) - 1;
+    tm.tm_mday = FROM_DEC(ASN1_STRING_get0_data(atm) + 4);
+    tm.tm_hour = FROM_DEC(ASN1_STRING_get0_data(atm) + 6);
+    tm.tm_min = FROM_DEC(ASN1_STRING_get0_data(atm) + 8);
+    tm.tm_sec = FROM_DEC(ASN1_STRING_get0_data(atm) + 10);
 
 #ifdef HAVE_TIMEZONE
     /* ANSI C time handling is... interesting. */
@@ -320,10 +321,10 @@ static int check_identity(const struct host_info *server, X509 *cert,
             else if (nm->type == GEN_IPADD && server && server->literal) {
                 /* compare IP addfress with server literal IP address. */
                 ne_inet_addr *ia;
-                if (nm->d.ip->length == 4)
-                    ia = ne_iaddr_make(ne_iaddr_ipv4, nm->d.ip->data);
-                else if (nm->d.ip->length == 16)
-                    ia = ne_iaddr_make(ne_iaddr_ipv6, nm->d.ip->data);
+                if (ASN1_STRING_length(nm->d.ip) == 4)
+                    ia = ne_iaddr_make(ne_iaddr_ipv4, ASN1_STRING_get0_data(nm->d.ip));
+                else if (ASN1_STRING_length(nm->d.ip) == 16)
+                    ia = ne_iaddr_make(ne_iaddr_ipv6, ASN1_STRING_get0_data(nm->d.ip));
                 else
                     ia = NULL;
                 /* ne_iaddr_make returns NULL if address type is unsupported */
@@ -334,7 +335,7 @@ static int check_identity(const struct host_info *server, X509 *cert,
                 } else {
                     NE_DEBUG(NE_DBG_SSL, "iPAddress name with unsupported "
                              "address type (length %d), skipped.\n",
-                             nm->d.ip->length);
+                             ASN1_STRING_length(nm->d.ip));
                 }
             }
         }
@@ -345,8 +346,12 @@ static int check_identity(const struct host_info *server, X509 *cert,
     /* Check against the commonName if no DNS alt. names were found,
      * as per RFC3280. */
     if (!found) {
-	X509_NAME *subj = X509_get_subject_name(cert);
-	X509_NAME_ENTRY *entry;
+#if OPENSSL_VERSION_NUMBER >= 0x40000000L
+	const X509_NAME *subj = X509_get_subject_name(cert);
+#else
+	X509_NAME* subj = X509_get_subject_name(cert);
+#endif
+	const X509_NAME_ENTRY *entry;
 	ne_buffer *cname = ne_buffer_ncreate(30);
 	int idx = -1, lastidx;
 
@@ -911,7 +916,7 @@ static ne_ssl_client_cert *parse_client_cert(PKCS12 *p12)
     if (PKCS12_parse(p12, NULL, &pkey, &cert, NULL) == 1) {
         /* Success - no password needed for decryption. */
         int len = 0;
-        unsigned char *name;
+        const unsigned char *name;
 
         if (!cert || !pkey) {
             PKCS12_free(p12);
