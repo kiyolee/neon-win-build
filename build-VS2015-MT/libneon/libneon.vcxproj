@@ -127,6 +127,7 @@
     <ClCompile Include="..\..\src\ne_session.c" />
     <ClCompile Include="..\..\src\ne_socket.c" />
     <ClCompile Include="..\..\src\ne_socks.c" />
+    <ClCompile Include="..\..\src\ne_ssl.c" />
     <ClCompile Include="..\..\src\ne_sspi.c" />
     <ClCompile Include="..\..\src\ne_string.c" />
     <ClCompile Include="..\..\src\ne_uri.c" />
@@ -148,7 +149,6 @@
     <ClInclude Include="..\..\src\ne_internal.h" />
     <ClInclude Include="..\..\src\ne_locks.h" />
     <ClInclude Include="..\..\src\ne_md5.h" />
-    <ClInclude Include="..\..\src\ne_ntlm.h" />
     <ClInclude Include="..\..\src\ne_pkcs11.h" />
     <ClInclude Include="..\..\src\ne_private.h" />
     <ClInclude Include="..\..\src\ne_privssl.h" />

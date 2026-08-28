@@ -39,8 +39,6 @@ src/ne_locks.c
 src/ne_locks.h
 src/ne_md5.c
 src/ne_md5.h
-src/ne_ntlm.c
-src/ne_ntlm.h
 src/ne_oldacl.c
 src/ne_openssl.c
 src/ne_pkcs11.c
@@ -58,6 +56,7 @@ src/ne_session.h
 src/ne_socket.c
 src/ne_socket.h
 src/ne_socks.c
+src/ne_ssl.c
 src/ne_ssl.h
 src/ne_sspi.c
 src/ne_sspi.h
@@ -84,6 +83,7 @@ test/STATUS
 test/acl3744.c
 test/auth.c
 test/basic.c
+test/checksyms.sh
 test/common/ChangeLog
 test/common/README
 test/common/child.c
@@ -117,6 +117,7 @@ test/socket.c
 test/ssl.c
 test/string-tests.c
 test/stubs.c
+test/symvers.txt
 test/twooh7.c
 test/uri-tests.c
 test/util-socks.c
