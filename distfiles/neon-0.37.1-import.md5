@@ -1,11 +1,11 @@
 dc19c56ee8e2a00f63e90ab8cd8ebec4  .gitignore
 aa192e4dfc75ea883e3fda1a0854c9eb  AUTHORS
 655cdbd913984b427e2ba15d763d447f  INSTALL.win32
-fa6c3be5936fcb193871ad3bf7b60d00  NEWS
+3e49ac7381426200db28f827ffcceed8  NEWS
 19a4ab658ebca5a2470439a292a7082f  README.neon.md
 be25f088579f56985ecc606c0fef8851  THANKS
 418cd1e5f8098158025beab6ae564325  TODO
-d666541d893e2a3f08be3bae57840667  config.hw
+2bed00d89153fce77009b08d36ead8f5  config.hw
 c7fac2e5eed0e04183d066914bbd52c7  config.hw.in
 04b449dad2228b95db95077662aba133  neon.mak
 f02846b508023f9784835bb8a4420172  src/.gitignore
@@ -40,7 +40,7 @@ f8529c8508d0a8620c2f2eb3ffae5c15  src/ne_locks.h
 6cc586e3cf0be64e56d5b845198e37b9  src/ne_md5.c
 1632d7a1fa595742e0693c70390b2f97  src/ne_md5.h
 0e1b71f8adf3659409c7cd6c534e769c  src/ne_oldacl.c
-0997e4f277edb99f5b9fd4c24cee664a  src/ne_openssl.c
+dff30420433dd89e4a156e1f6c815407  src/ne_openssl.c
 3c10d6c1f73ba92077a642c41126bef3  src/ne_pkcs11.c
 c47650540088ec3af3910f7f0ecbd7b8  src/ne_pkcs11.h
 3f5a8f26e0ce0d39692bee23d8b97af5  src/ne_private.h
@@ -81,7 +81,7 @@ a2bbe2aeca11533b4d8c42f79ccb8d29  test/ChangeLog
 a6ea667683212305ef93e9ea724c9287  test/README
 c70550a17768f3562fb9c8e1f96b3311  test/STATUS
 0c5bd3ff2512a1e660041bdc3ed969f8  test/acl3744.c
-2db3081981aecb824f41bc35eb93bcf7  test/auth.c
+cc4f33e555564e9f6ccb043d6e353a69  test/auth.c
 feb841771f0896451cb436c065ef84b9  test/basic.c
 c34499384803bfb70046db09699e6653  test/checksyms.sh
 4374db7562aad0e8f42daf39e044cbd1  test/common/ChangeLog
@@ -113,7 +113,7 @@ d4b46c78992a5e1903c26776b3f74369  test/redirect.c
 a2a33515b1301b14f7806740c693c127  test/run.sh
 a86372c164af5dcf56b5be8ec36dac4c  test/session.c
 8bf322e6e78e74902a991447518718b5  test/skeleton.c
-185ce007f54212fa60722b9d6f3b7169  test/socket.c
+463d3bfa9255c52d17ef0103fc67cdcb  test/socket.c
 942b30393c521642bd18ef5999030d73  test/ssl.c
 b8db8b5a63c246ea7b463761ebe827ae  test/string-tests.c
 16fbaa2cf85f6a57ee95bdae17eaa495  test/stubs.c
