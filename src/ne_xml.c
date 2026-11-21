@@ -218,7 +218,12 @@ static void decl_handler(void *userdata,
 int ne_xml_currentline(ne_xml_parser *p) 
 {
 #ifdef HAVE_EXPAT
+#if XML_MAJOR_VERSION > 2 || (XML_MAJOR_VERSION == 2 && XML_MINOR_VERSION >= 9)
+    uint64_t line = XML_GetCurrentLineNumber64(p->parser);
+    return (line < INT_MAX) ? (int)line : INT_MAX;
+#else
     return XML_GetCurrentLineNumber(p->parser);
+#endif
 #else
     return p->parser->input->line;
 #endif
@@ -634,9 +639,15 @@ int ne_xml_parse(ne_xml_parser *p, const char *block, size_t len)
     ret = XML_Parse(p->parser, block, len, flag);
     NE_DEBUG(NE_DBG_XMLPARSE, "XML: XML_Parse returned %d\n", ret);
     if (ret == 0 && p->failure == 0) {
+#if XML_MAJOR_VERSION > 2 || (XML_MAJOR_VERSION == 2 && XML_MINOR_VERSION >= 9)
+        uint64_t line64 = XML_GetCurrentLineNumber64(p->parser);
+        int line = (line64 < INT_MAX) ? (int)line64 : INT_MAX;
+#else
+        int line = XML_GetCurrentLineNumber(p->parser);
+#endif
 	ne_snprintf(p->error, ERR_SIZE,
 		    "XML parse error at line %" NE_FMT_XML_SIZE ": %s", 
-		    XML_GetCurrentLineNumber(p->parser),
+		    line,
 		    XML_ErrorString(XML_GetErrorCode(p->parser)));
 	p->failure = 1;
         NE_DEBUG(NE_DBG_XMLPARSE, "XML: Parse error: %s\n", p->error);
