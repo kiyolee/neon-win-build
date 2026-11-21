@@ -151,7 +151,11 @@ static int append_dirstring(ne_buffer *buf, const ASN1_STRING *str)
 {
     unsigned char *tmp = (unsigned char *)""; /* initialize to workaround 0.9.6 bug */
     const unsigned char *data = ASN1_STRING_get0_data(str);
+#if OPENSSL_VERSION_NUMBER >= 0x40100000L
+    size_t len = ASN1_STRING_get_length(str);
+#else
     int len = ASN1_STRING_length(str);
+#endif
     int type = ASN1_STRING_type(str);
 
     switch (type) {
@@ -200,7 +204,11 @@ static int append_dirstring(ne_buffer *buf, const ASN1_STRING *str)
 static char *dup_ia5string(const ASN1_IA5STRING *as)
 {
     const unsigned char *data = ASN1_STRING_get0_data(as);
+#if OPENSSL_VERSION_NUMBER >= 0x40100000L
+    size_t length = ASN1_STRING_get_length(as);
+#else
     int length = ASN1_STRING_length(as);
+#endif
 
     return ne_strnqdup(data, length);
 }
@@ -328,7 +336,11 @@ static int check_identity(const ne_ssl_certificate *server_cert,
             else if (nm->type == GEN_IPADD && address) {
                 /* compare IP address with server literal IP address. */
                 const unsigned char *data = ASN1_STRING_get0_data(nm->d.ip);
+#if OPENSSL_VERSION_NUMBER >= 0x40100000L
+                size_t len = ASN1_STRING_get_length(nm->d.ip);
+#else
                 int len = ASN1_STRING_length(nm->d.ip);
+#endif
                 ne_inet_addr *ia;
 
                 if (len == 4)
